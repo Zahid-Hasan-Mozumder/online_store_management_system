@@ -19,7 +19,6 @@ export class AdminController {
 
     @Get()
     @AuthorizeAdmin({ role : "admin", permission : "read"})
-    
     getAdmins(@GetUser() user : AdminDto, @Query() pagination : PaginationDto){
         return this.adminService.getAdmins(user, pagination);
     }

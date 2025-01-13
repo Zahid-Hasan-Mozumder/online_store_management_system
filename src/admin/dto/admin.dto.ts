@@ -2,6 +2,30 @@ import { PartialType } from "@nestjs/mapped-types";
 import { Type } from "class-transformer";
 import { IsBoolean, IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, Matches, MaxLength, ValidateNested } from "class-validator";
 
+export class AdminDto {
+    id : number;
+    email : string;
+    adminPermissions : {
+        create : boolean,
+        read : boolean,
+        update : boolean,
+        delete : boolean
+    };
+    productPermissions : {
+        create : boolean,
+        read : boolean,
+        update : boolean,
+        delete : boolean
+    };
+    clientPermissions : {
+        create : boolean,
+        read : boolean,
+        update : boolean,
+        delete : boolean
+    };
+    role : string;
+}
+
 export class PermissionsDto {
     @IsBoolean()
     @IsOptional()
@@ -25,30 +49,6 @@ export class PermissionsDto {
         this.update = false;
         this.delete = false;
     }
-}
-
-export class AdminDto {
-    id : number;
-    email : string;
-    adminPermissions : {
-        create : boolean,
-        read : boolean,
-        update : boolean,
-        delete : boolean
-    };
-    productPermissions : {
-        create : boolean,
-        read : boolean,
-        update : boolean,
-        delete : boolean
-    };
-    clientPermissions : {
-        create : boolean,
-        read : boolean,
-        update : boolean,
-        delete : boolean
-    };
-    role : string;
 }
 
 export class CreateAdminDto {
