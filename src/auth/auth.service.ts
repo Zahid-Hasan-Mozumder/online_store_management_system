@@ -5,6 +5,7 @@ import * as argon from "argon2";
 import { Admins } from "@prisma/client";
 import { ConfigService } from "@nestjs/config";
 import { JwtService } from "@nestjs/jwt";
+import { PermissionType } from "./enum";
 
 @Injectable()
 export class AuthService {
@@ -29,30 +30,51 @@ export class AuthService {
                 firstName : dto.firstName,
                 lastName : dto.lastName,
                 email : dto.email,
-                password : hashedPassword,
-                adminPermissions : {
-                    create : dto.adminPermissions.create,
-                    read : dto.adminPermissions.read,
-                    update : dto.adminPermissions.update,
-                    delete : dto.adminPermissions.delete
-                },
-                productPermissions : {
-                    create : dto.productPermissions.create,
-                    read : dto.productPermissions.read,
-                    update : dto.productPermissions.update,
-                    delete : dto.productPermissions.delete
-                },
-                clientPermissions : {
-                    create : dto.clientPermissions.create,
-                    read : dto.clientPermissions.read,
-                    update : dto.clientPermissions.update,
-                    delete : dto.clientPermissions.delete
-                }
+                password : hashedPassword
             }
         })
 
+        const adminPermissions = await this.prisma.permissions.create({
+            data : {
+                adminId : superAdmin.id,
+                permissionType : PermissionType.admin,
+                create : true,
+                read : true,
+                update : true,
+                delete : true
+            }
+        })
+
+        const productPermissions = await this.prisma.permissions.create({
+            data : {
+                adminId : superAdmin.id,
+                permissionType : PermissionType.product,
+                create : true,
+                read : true,
+                update : true,
+                delete : true
+            }
+        })
+
+        const clientPermissions = await this.prisma.permissions.create({
+            data : {
+                adminId : superAdmin.id,
+                permissionType : PermissionType.client,
+                create : true,
+                read : true,
+                update : true,
+                delete : true
+            }
+        })
+
+        delete superAdmin.password
+
         return {
-            admin : superAdmin
+            message : "You have signed up as the super admin. Congratulations!",
+            admin : superAdmin,
+            adminPermissions : adminPermissions,
+            productPermissions : productPermissions,
+            clientPermissions : clientPermissions
         }
     }
 

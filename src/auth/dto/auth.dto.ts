@@ -1,24 +1,6 @@
 import { Type } from "class-transformer";
-import { IsBoolean, IsEmail, IsNotEmpty, IsOptional, IsString, Matches, MaxLength, ValidateNested } from "class-validator";
-
-export class PermissionsDto {
-    @IsBoolean()
-    @IsOptional()
-    create: boolean = true;
-
-    @IsBoolean()
-    @IsOptional()
-    read: boolean = true;
-
-    @IsBoolean()
-    @IsOptional()
-    update: boolean = true;
-
-    @IsBoolean()
-    @IsOptional()
-    delete: boolean = true;
-}
-
+import { IsBoolean, IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, Matches, MaxLength } from "class-validator";
+import { PermissionType } from "../enum";
 
 export class AdminSignupDto {
     @IsOptional()
@@ -41,21 +23,31 @@ export class AdminSignupDto {
         message: "Only @ ! # - _ alphanumeric characters are allowed"
     })
     password: string;
+}
 
-    @IsOptional()
-    @ValidateNested()
-    @Type(() => PermissionsDto)
-    adminPermissions: PermissionsDto;
+export class PermissionsDto {
+    @IsNotEmpty()
+    adminId : Number;
 
-    @IsOptional()
-    @ValidateNested()
-    @Type(() => PermissionsDto)
-    productPermissions: PermissionsDto;
+    @IsNotEmpty()
+    @IsEnum(PermissionType)
+    permissionType : PermissionType;
 
+    @IsBoolean()
     @IsOptional()
-    @ValidateNested()
-    @Type(() => PermissionsDto)
-    clientPermissions: PermissionsDto;
+    create: boolean = true;
+
+    @IsBoolean()
+    @IsOptional()
+    read: boolean = true;
+
+    @IsBoolean()
+    @IsOptional()
+    update: boolean = true;
+
+    @IsBoolean()
+    @IsOptional()
+    delete: boolean = true;
 }
 
 export class AdminSigninDto {

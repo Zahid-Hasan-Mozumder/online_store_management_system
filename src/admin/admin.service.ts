@@ -1,51 +1,15 @@
 import { ConflictException, ForbiddenException, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { CreateAdminDto, UpdateAdminDto, UserDto } from './dto';
+import { CreateAdminDto, PaginationDto, UpdateAdminDto, AdminDto } from './dto';
 import * as argon from "argon2";
+import { PermissionType } from '../auth/enum';
 
 @Injectable()
 export class AdminService {
 
     constructor(private prisma: PrismaService) { }
 
-    async checkPermissions(user: UserDto, create: boolean, read: boolean, update: boolean, deelete: boolean) {
-        if (user.role !== "admin") {
-            return false;
-        }
-
-        const admin = await this.prisma.admins.findUnique({
-            where: {
-                id: user.id
-            }
-        })
-
-        const adminPermissions = admin.adminPermissions as {
-            create: boolean,
-            read: boolean,
-            update: boolean,
-            delete: boolean
-        };
-
-        if (
-            !(
-                (adminPermissions.create && create) ||
-                (adminPermissions.read && read) ||
-                (adminPermissions.update && update) ||
-                (adminPermissions.delete && deelete)
-            )
-        ) {
-            return false;
-        }
-
-        return true;
-    }
-
-    async createAdmin(user: UserDto, dto: CreateAdminDto) {
-        
-        if(!this.checkPermissions(user, true, false, false, false)){
-            throw new ForbiddenException("You are not authorize for it");
-        }
-
+    async createAdmin(user: AdminDto, dto: CreateAdminDto) {
         const alreadyExistAdmin = await this.prisma.admins.findUnique({
             where: {
                 email: dto.email
@@ -63,25 +27,40 @@ export class AdminService {
                 firstName: dto.firstName,
                 lastName: dto.lastName,
                 email: dto.email,
-                password: hashedPassword,
-                adminPermissions: {
-                    create: dto.adminPermissions.create,
-                    read: dto.adminPermissions.read,
-                    update: dto.adminPermissions.update,
-                    delete: dto.adminPermissions.delete
-                },
-                productPermissions: {
-                    create: dto.productPermissions.create,
-                    read: dto.productPermissions.read,
-                    update: dto.productPermissions.update,
-                    delete: dto.productPermissions.delete
-                },
-                clientPermissions: {
-                    create: dto.clientPermissions.create,
-                    read: dto.clientPermissions.read,
-                    update: dto.clientPermissions.update,
-                    delete: dto.clientPermissions.delete
-                }
+                password: hashedPassword
+            }
+        })
+
+        const adminPermissions = await this.prisma.permissions.create({
+            data: {
+                adminId: newAdmin.id,
+                permissionType: PermissionType.admin,
+                create: dto.adminPermissions.create,
+                read: dto.adminPermissions.read,
+                update: dto.adminPermissions.update,
+                delete: dto.adminPermissions.delete
+            }
+        })
+
+        const productPermissions = await this.prisma.permissions.create({
+            data: {
+                adminId: newAdmin.id,
+                permissionType: PermissionType.product,
+                create: dto.productPermissions.create,
+                read: dto.productPermissions.read,
+                update: dto.productPermissions.update,
+                delete: dto.productPermissions.delete
+            }
+        })
+
+        const clientPermissions = await this.prisma.permissions.create({
+            data: {
+                adminId: newAdmin.id,
+                permissionType: PermissionType.client,
+                create: dto.clientPermissions.create,
+                read: dto.clientPermissions.read,
+                update: dto.clientPermissions.update,
+                delete: dto.clientPermissions.delete
             }
         })
 
@@ -89,30 +68,41 @@ export class AdminService {
 
         return {
             message: "Admin created successfully",
-            admin: newAdmin
+            admin: newAdmin,
+            adminPermissions: adminPermissions,
+            productPermissions: productPermissions,
+            clientPermissions: clientPermissions
         }
     }
 
-    async getAdmins(user: UserDto) {
-
-        if(!this.checkPermissions(user, false, true, false, false)){
-            throw new ForbiddenException("You are not authorize for it");
-        }
+    async getAdmins(user: AdminDto, pagination : PaginationDto) {
+        
+        const page = Number(pagination.page);
+        const limit = Number(pagination.limit);
 
         const admins = await this.prisma.admins.findMany()
-        const filteredAdmins = admins.map(({ password, ...admin }) => admin)
+
+        const paginationInfo = {
+            totalPage : Math.ceil(admins.length / limit),
+            totalItems : admins.length,
+            currentPage : page,
+            currentItems : Math.min(admins.length - ((page - 1) * limit), limit),
+            prevPage : (page === 1) ? null : `/admins?page=${page - 1}&limit=${limit}`,
+            nextPage : (page === Math.ceil(admins.length / limit)) ? null : `/admins?page=${page + 1}&limit=${limit}`
+        }
+
+        const necessaryAdmins = admins.slice((page - 1) * limit, page * limit);
+
+        const filteredAdmins = necessaryAdmins.map(({ password, ...admin }) => admin)
+        
         return {
             message: "List of all the admins",
-            admins: filteredAdmins
+            admins: filteredAdmins,
+            pagination: paginationInfo
         }
     }
 
-    async getSpecificAdmin(user: UserDto, id: number) {
-
-        if(!this.checkPermissions(user, false, true, false, false)){
-            throw new ForbiddenException("You are not authorize for it");
-        }
-
+    async getSpecificAdmin(user: AdminDto, id: number) {
         const foundAdmin = await this.prisma.admins.findUnique({
             where: {
                 id: id
@@ -127,12 +117,7 @@ export class AdminService {
         }
     }
 
-    async updateSpecificAdmin(user: UserDto, id: number, dto: UpdateAdminDto) {
-
-        if(!this.checkPermissions(user, false, false, true, false)){
-            throw new ForbiddenException("You are not authorize for it");
-        }
-
+    async updateSpecificAdmin(user: AdminDto, id: number, dto: UpdateAdminDto) {
         const updatedAdmin = await this.prisma.admins.update({
             where: {
                 id: id
@@ -140,25 +125,46 @@ export class AdminService {
             data: {
                 firstName: dto.firstName,
                 lastName: dto.lastName,
-                email: dto.email,
-                adminPermissions: {
-                    create: dto.adminPermissions.create,
-                    read: dto.adminPermissions.read,
-                    update: dto.adminPermissions.update,
-                    delete: dto.adminPermissions.delete
-                },
-                productPermissions: {
-                    create: dto.productPermissions.create,
-                    read: dto.productPermissions.read,
-                    update: dto.productPermissions.update,
-                    delete: dto.productPermissions.delete
-                },
-                clientPermissions: {
-                    create: dto.clientPermissions.create,
-                    read: dto.clientPermissions.read,
-                    update: dto.clientPermissions.update,
-                    delete: dto.clientPermissions.delete
-                }
+                email: dto.email
+            }
+        })
+
+        const updatedAdminPermissions = await this.prisma.permissions.update({
+            where: {
+                id: updatedAdmin.id,
+                permissionType: PermissionType.admin
+            },
+            data: {
+                create: dto.adminPermissions.create,
+                read: dto.adminPermissions.read,
+                update: dto.adminPermissions.update,
+                delete: dto.adminPermissions.delete
+            }
+        })
+
+        const updatedProductPermissions = await this.prisma.permissions.update({
+            where: {
+                id: updatedAdmin.id,
+                permissionType: PermissionType.product
+            },
+            data: {
+                create: dto.productPermissions.create,
+                read: dto.productPermissions.read,
+                update: dto.productPermissions.update,
+                delete: dto.productPermissions.delete
+            }
+        })
+
+        const updatedClientPermissions = await this.prisma.permissions.update({
+            where: {
+                id: updatedAdmin.id,
+                permissionType: PermissionType.client
+            },
+            data: {
+                create: dto.clientPermissions.create,
+                read: dto.clientPermissions.read,
+                update: dto.clientPermissions.update,
+                delete: dto.clientPermissions.delete
             }
         })
 
@@ -166,16 +172,14 @@ export class AdminService {
 
         return {
             message: "Admin has been updated successfully",
-            admin: updatedAdmin
+            admin: updatedAdmin,
+            updatedAdminPermissions: updatedAdminPermissions,
+            updatedProductPermissions: updatedProductPermissions,
+            updatedClientPermissions: updatedClientPermissions
         }
     }
 
-    async deleteSpecificAdmin(user: UserDto, id: number) {
-
-        if(!this.checkPermissions(user, false, false, false, true)){
-            throw new ForbiddenException("You are not authorize for it");
-        }
-
+    async deleteSpecificAdmin(user: AdminDto, id: number) {
         await this.prisma.admins.delete({
             where: {
                 id: id

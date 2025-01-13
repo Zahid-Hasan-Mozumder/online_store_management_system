@@ -3,6 +3,7 @@ import { AuthController } from "./auth.controller";
 import { AuthService } from "./auth.service";
 import { JwtModule } from "@nestjs/jwt";
 import { JwtStrategy } from "./strategy";
+import { PermissionType } from "./enum";
 
 @Module({
     imports: [JwtModule.register({})],

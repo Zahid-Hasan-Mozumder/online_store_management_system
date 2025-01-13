@@ -22,7 +22,21 @@ model Admins {
   registeredAt DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  adminPermissions   Json
-  productPermissions Json
-  clientPermissions  Json
+  permissions Permissions[]
+}
+
+model Permissions {
+  id Int @id @default(autoincrement())
+
+  adminId        Int
+  permissionType String
+
+  create Boolean
+  read   Boolean
+  update Boolean
+  delete Boolean
+
+  admin Admins @relation(fields: [adminId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([adminId, permissionType])
 }
