@@ -9,7 +9,7 @@ export class PermissionGuard implements CanActivate {
 
     canActivate(context: ExecutionContext): boolean {
         
-        const data = this.reflector.get<{ role : string; permission : string }>('data', context.getHandler());
+        const data = this.reflector.get<{ role : string; permission : String; activity : string }>('data', context.getHandler());
         const request : Express.Request & { user : AdminDto } = context.switchToHttp().getRequest();
 
         if(request.user?.role !== data.role){
@@ -18,10 +18,15 @@ export class PermissionGuard implements CanActivate {
 
         if(
             !(
-                (data.permission === "create" && request.user?.adminPermissions.create) ||
-                (data.permission === "read" && request.user?.adminPermissions.read) ||
-                (data.permission === "update" && request.user?.adminPermissions.update) ||
-                (data.permission === "delete" && request.user?.adminPermissions.delete)
+                (data.permission === "admin" && data.activity === "create" && request.user?.adminPermissions.create) ||
+                (data.permission === "admin" && data.activity === "read" && request.user?.adminPermissions.read) ||
+                (data.permission === "admin" && data.activity === "update" && request.user?.adminPermissions.update) ||
+                (data.permission === "admin" && data.activity === "delete" && request.user?.adminPermissions.delete) ||
+
+                (data.permission === "product" && data.activity === "create" && request.user?.productPermissions.create) ||
+                (data.permission === "product" && data.activity === "read" && request.user?.productPermissions.read) ||
+                (data.permission === "product" && data.activity === "update" && request.user?.productPermissions.update) ||
+                (data.permission === "product" && data.activity === "delete" && request.user?.productPermissions.delete)
             )
         ) {
             throw new ForbiddenException("You don't have permission to access this resource")

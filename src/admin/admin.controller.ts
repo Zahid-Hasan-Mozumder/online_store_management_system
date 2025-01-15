@@ -12,31 +12,31 @@ export class AdminController {
     constructor (private adminService : AdminService) {}
     
     @Post()
-    @AuthorizeAdmin({ role : "admin", permission : "create"})
+    @AuthorizeAdmin({ role : "admin", permission: "admin", activity : "create"})
     createAdmin(@GetUser() user : AdminDto, @Body() dto : CreateAdminDto) {
         return this.adminService.createAdmin(user, dto);
     }
 
     @Get()
-    @AuthorizeAdmin({ role : "admin", permission : "read"})
+    @AuthorizeAdmin({ role : "admin", permission: "admin", activity : "read"})
     getAdmins(@GetUser() user : AdminDto, @Query() pagination : PaginationDto){
         return this.adminService.getAdmins(user, pagination);
     }
 
     @Get(':id')
-    @AuthorizeAdmin({ role : "admin", permission : "read"})
+    @AuthorizeAdmin({ role : "admin", permission: "admin", activity : "read"})
     getSpecificAdmin(@GetUser() user : AdminDto, @Param('id') id : string){
         return this.adminService.getSpecificAdmin(user, parseInt(id));
     }
 
     @Patch(':id')
-    @AuthorizeAdmin({ role : "admin", permission : "update"})
+    @AuthorizeAdmin({ role : "admin", permission: "admin", activity : "update"})
     updateSpecificAdmin(@GetUser() user : AdminDto, @Param('id') id : string, @Body() dto : UpdateAdminDto){
         return this.adminService.updateSpecificAdmin(user, parseInt(id), dto);
     }
 
     @Delete(':id')
-    @AuthorizeAdmin({ role : "admin", permission : "delete"})
+    @AuthorizeAdmin({ role : "admin", permission: "admin", activity : "delete"})
     deleteSpecificAdmin(@GetUser() user : AdminDto, @Param('id') id : string){
         return this.adminService.deleteSpecificAdmin(user, parseInt(id));
     }

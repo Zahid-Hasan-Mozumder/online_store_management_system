@@ -63,7 +63,7 @@ model Products {
 
 model Options {
   id       Int      @id @default(autoincrement())
-  name     String
+  name     String?
   position Int?
   values   String[]
 
@@ -76,7 +76,7 @@ model Options {
 
 model Varients {
   id           Int     @id @default(autoincrement())
-  title        String
+  title        String?
   option1      String?
   option2      String?
   option3      String?
@@ -94,7 +94,7 @@ model Varients {
 model Images {
   id        Int     @id @default(autoincrement())
   title     String?
-  url       String
+  url       String?
   position  Int?
   height    Int?
   Width     Int?
@@ -112,6 +112,9 @@ model Collections {
   id   Int    @id @default(autoincrement())
   name String
 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   products CollectionsProducts[]
 }
 
@@ -119,6 +122,9 @@ model Tags {
   id   Int    @id @default(autoincrement())
   name String
 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
   products TagsProducts[]
 }
 
@@ -140,4 +146,19 @@ model TagsProducts {
 
   tag     Tags     @relation(fields: [tagId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   product Products @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+}
+
+model ProductCounts {
+  id Int @id @default(autoincrement())
+  count Int @default(0)
+}
+
+model CollectionCounts {
+  id Int @id @default(autoincrement())
+  count Int @default(0)
+}
+
+model TagCounts {
+  id Int @id @default(autoincrement())
+  count Int @default(0)
 }
