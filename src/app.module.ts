@@ -5,6 +5,9 @@ import { ConfigModule } from '@nestjs/config';
 import { AdminModule } from './admin/admin.module';
 import { ProductModule } from './product/product.module';
 import { MulterModule } from '@nestjs/platform-express';
+import { VarientModule } from './varient/varient.module';
+import { CollectionModule } from './collection/collection.module';
+import { TagModule } from './tag/tag.module';
 
 @Module({
   imports: [
@@ -13,7 +16,7 @@ import { MulterModule } from '@nestjs/platform-express';
     }),
     MulterModule.register(),
     AuthModule,
-    PrismaModule, AdminModule, ProductModule
+    PrismaModule, AdminModule, ProductModule, VarientModule, CollectionModule, TagModule
   ]
 })
 export class AppModule { }

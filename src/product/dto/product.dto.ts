@@ -18,6 +18,11 @@ export class OptionsDto {
 }
 
 export class VarientsDto {
+
+    @IsOptional()
+    @IsString()
+    title : string;
+    
     @IsOptional()
     @IsString()
     option1 : string;
@@ -63,6 +68,64 @@ export class ImagesDto {
 
 export class ProductDto {
     @IsNotEmpty()
+    @IsString()
+    @MaxLength(1000)
+    title : string;
+
+    @IsOptional()
+    @IsString()
+    description : string;
+
+    @IsOptional()
+    @IsString()
+    productType : string;
+    
+    @IsOptional()
+    @IsNumber()
+    price : number;
+
+    @IsOptional()
+    @IsNumber()
+    comparePrice : number;
+
+    @IsOptional()
+    @IsString()
+    vendor : string;
+
+    @IsOptional()
+    @IsEnum(ProductStatus)
+    status : ProductStatus;
+
+    @IsOptional()
+    @IsArray()
+    @IsString({ each: true })
+    collections : string[];
+
+    @IsOptional()
+    @IsArray()
+    @IsString({ each: true })
+    tags : string[];
+
+    @IsOptional()
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => OptionsDto)
+    options : OptionsDto[];
+
+    @IsOptional()
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => VarientsDto)
+    varients : VarientsDto[];
+
+    @IsOptional()
+    @ValidateNested({ each: true })
+    @Type(() => ImagesDto)
+    images : ImagesDto[];
+}
+
+export class UpdateProductDto {
+    @IsOptional()
     @IsString()
     @MaxLength(1000)
     title : string;
