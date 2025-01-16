@@ -4,7 +4,9 @@ import { AuthorizeAdmin } from '../admin/decorator';
 import { ProductDto, UpdateProductDto } from './dto';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { MulterImageStorage } from './multer';
+import { ApiTags } from '@nestjs/swagger';
 
+@ApiTags('Products')
 @Controller('products')
 export class ProductController {
 

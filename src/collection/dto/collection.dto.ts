@@ -1,6 +1,8 @@
+import { ApiProperty } from "@nestjs/swagger";
 import { IsNotEmpty, IsNumber, IsOptional, IsString, MaxLength } from "class-validator";
 
 export class CollectionDto {
+    @ApiProperty({required : true})
     @IsNotEmpty()
     @IsString()
     @MaxLength(1000)
@@ -8,6 +10,7 @@ export class CollectionDto {
 }
 
 export class UpdateCollectionDto {
+    @ApiProperty({required : false})
     @IsOptional()
     @IsString()
     @MaxLength(1000)
@@ -15,6 +18,7 @@ export class UpdateCollectionDto {
 }
 
 export class AddProductInCollectionDto {
+    @ApiProperty({required : true})
     @IsNotEmpty()
     @IsNumber()
     productId : number;

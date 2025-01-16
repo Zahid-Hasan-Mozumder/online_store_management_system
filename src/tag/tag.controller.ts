@@ -2,7 +2,9 @@ import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common'
 import { AuthorizeAdmin } from '../admin/decorator';
 import { AddProductInTagDto, TagDto, UpdateTagDto } from './dto';
 import { TagService } from './tag.service';
+import { ApiTags } from '@nestjs/swagger';
 
+@ApiTags('Tag')
 @Controller('tags')
 export class TagController {
 

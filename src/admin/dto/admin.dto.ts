@@ -1,4 +1,5 @@
 import { PartialType } from "@nestjs/mapped-types";
+import { ApiProperty } from "@nestjs/swagger";
 import { Type } from "class-transformer";
 import { IsBoolean, IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, Matches, MaxLength, ValidateNested } from "class-validator";
 
@@ -27,18 +28,23 @@ export class AdminDto {
 }
 
 export class PermissionsDto {
+
+    @ApiProperty({description : "Create Permission (Default : false)", required: false})
     @IsBoolean()
     @IsOptional()
     create: boolean;
 
+    @ApiProperty({description : "Read Permission (Default : false)", required: false})
     @IsBoolean()
     @IsOptional()
     read: boolean;
 
+    @ApiProperty({description : "Update Permission (Default : false)", required: false})
     @IsBoolean()
     @IsOptional()
     update: boolean;
 
+    @ApiProperty({description : "Delete Permission (Default : false)", required: false})
     @IsBoolean()
     @IsOptional()
     delete: boolean;
@@ -52,20 +58,25 @@ export class PermissionsDto {
 }
 
 export class CreateAdminDto {
+
+    @ApiProperty({description: "First name of the admin", required: false})
     @IsOptional()
     @IsString()
     @MaxLength(1000)
     firstName: string;
 
+    @ApiProperty({description: "Last name of the admin", required: true})
     @IsNotEmpty()
     @IsString()
     @MaxLength(1000)
     lastName: string;
 
+    @ApiProperty({description: "Email of the admin", required: true})
     @IsNotEmpty()
     @IsEmail()
     email: string;
 
+    @ApiProperty({description: "Password of the admin (Only : a-z A-Z 0-9 @ ! # - _)", required: true})
     @IsNotEmpty()
     @IsString()
     @Matches(/^[a-zA-Z0-9@!#-_]+$/, {
@@ -73,16 +84,19 @@ export class CreateAdminDto {
     })
     password: string;
 
+    @ApiProperty({description : "Admin permissions", required: false})
     @IsOptional()
     @ValidateNested()
     @Type(() => PermissionsDto)
     adminPermissions: PermissionsDto = new PermissionsDto();
 
+    @ApiProperty({description : "Product permissions", required: false})
     @IsOptional()
     @ValidateNested()
     @Type(() => PermissionsDto)
     productPermissions: PermissionsDto = new PermissionsDto();
 
+    @ApiProperty({description : "Client permissions", required: false})
     @IsOptional()
     @ValidateNested()
     @Type(() => PermissionsDto)

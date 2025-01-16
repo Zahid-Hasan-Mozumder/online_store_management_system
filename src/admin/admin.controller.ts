@@ -5,7 +5,10 @@ import { JwtGuard } from '../auth/guard';
 import { CreateAdminDto, UpdateAdminDto, AdminDto } from './dto/admin.dto';
 import { PaginationDto } from './dto';
 import { AuthorizeAdmin } from './decorator';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
+@ApiTags('Admin')
+@ApiBearerAuth()
 @Controller('admins')
 export class AdminController {
 

@@ -2,7 +2,9 @@ import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common'
 import { AuthorizeAdmin } from '../admin/decorator';
 import { VarientsDto } from '../product/dto';
 import { VarientService } from './varient.service';
+import { ApiTags } from '@nestjs/swagger';
 
+@ApiTags('Varient')
 @Controller()
 export class VarientController {
 
