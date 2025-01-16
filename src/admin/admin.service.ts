@@ -1,5 +1,5 @@
 import { ConflictException, ForbiddenException, Injectable } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { PrismaService } from '../prisma/prisma.service';
 import { CreateAdminDto, PaginationDto, UpdateAdminDto, AdminDto } from './dto';
 import * as argon from "argon2";
 import { PermissionType } from '../auth/enum';

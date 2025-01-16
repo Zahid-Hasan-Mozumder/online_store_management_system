@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common';
-import { AuthorizeAdmin } from 'src/admin/decorator';
-import { VarientsDto } from 'src/product/dto';
+import { AuthorizeAdmin } from '../admin/decorator';
+import { VarientsDto } from '../product/dto';
 import { VarientService } from './varient.service';
 
 @Controller()

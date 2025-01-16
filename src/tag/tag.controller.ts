@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common';
-import { AuthorizeAdmin } from 'src/admin/decorator';
+import { AuthorizeAdmin } from '../admin/decorator';
 import { AddProductInTagDto, TagDto, UpdateTagDto } from './dto';
 import { TagService } from './tag.service';
 

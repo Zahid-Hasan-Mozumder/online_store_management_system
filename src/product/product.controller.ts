@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Post, Put, UploadedFiles, UseInterceptors } from '@nestjs/common';
 import { ProductService } from './product.service';
-import { AuthorizeAdmin } from 'src/admin/decorator';
+import { AuthorizeAdmin } from '../admin/decorator';
 import { ProductDto, UpdateProductDto } from './dto';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { MulterImageStorage } from './multer';

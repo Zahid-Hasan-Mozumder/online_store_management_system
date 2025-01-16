@@ -1,8 +1,7 @@
 import { ConflictException, Injectable, UnprocessableEntityException } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { PrismaService } from '../prisma/prisma.service';
 import { OptionsDto, ProductDto, UpdateProductDto, VarientsDto } from './dto';
 import { ProductStatus } from './enum';
-import { json } from 'stream/consumers';
 
 @Injectable()
 export class ProductService {

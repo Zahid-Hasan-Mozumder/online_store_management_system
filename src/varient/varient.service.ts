@@ -1,6 +1,6 @@
 import { ConflictException, Injectable, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
-import { VarientsDto } from 'src/product/dto';
+import { PrismaService } from '../prisma/prisma.service';
+import { VarientsDto } from '../product/dto';
 
 @Injectable()
 export class VarientService {
