@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable } from "@nestjs/common";
+import { ForbiddenException, HttpException, Injectable, InternalServerErrorException } from "@nestjs/common";
 import { AdminSigninDto, AdminSignupDto } from "./dto";
 import { PrismaService } from "../prisma/prisma.service";
 import * as argon from "argon2";
@@ -11,106 +11,119 @@ import { PermissionType } from "./enum";
 export class AuthService {
 
     constructor(
-        private prisma : PrismaService,
-        private config : ConfigService,
-        private jwt : JwtService
-    ) {}
+        private prisma: PrismaService,
+        private config: ConfigService,
+        private jwt: JwtService
+    ) { }
 
-    async adminSignup(dto : AdminSignupDto) {
-        const adminCount = await this.prisma.admins.count();
-        
-        if(adminCount){
-            throw new ForbiddenException("You can't signup as a new admin")    
+    async adminSignup(dto: AdminSignupDto) {
+
+        try {
+            const result = await this.prisma.$transaction(async (tx) => {
+                const adminCount = await tx.admins.count();
+
+                if (adminCount) {
+                    throw new ForbiddenException("You can't signup as a new admin")
+                }
+
+                const hashedPassword = await argon.hash(dto.password);
+
+                const superAdmin = await tx.admins.create({
+                    data: {
+                        firstName: dto.firstName,
+                        lastName: dto.lastName,
+                        email: dto.email,
+                        password: hashedPassword
+                    }
+                })
+
+                const adminPermissions = await tx.permissions.create({
+                    data: {
+                        adminId: superAdmin.id,
+                        permissionType: PermissionType.admin,
+                        create: true,
+                        read: true,
+                        update: true,
+                        delete: true
+                    }
+                })
+
+                const productPermissions = await tx.permissions.create({
+                    data: {
+                        adminId: superAdmin.id,
+                        permissionType: PermissionType.product,
+                        create: true,
+                        read: true,
+                        update: true,
+                        delete: true
+                    }
+                })
+
+                const clientPermissions = await tx.permissions.create({
+                    data: {
+                        adminId: superAdmin.id,
+                        permissionType: PermissionType.client,
+                        create: true,
+                        read: true,
+                        update: true,
+                        delete: true
+                    }
+                })
+
+                delete superAdmin.password
+
+                return {
+                    message: "You have signed up as the super admin. Congratulations!",
+                    admin: superAdmin,
+                    adminPermissions: adminPermissions,
+                    productPermissions: productPermissions,
+                    clientPermissions: clientPermissions
+                }
+            })
+
+            return result;
+        } catch (error) {
+            if (error instanceof HttpException) {
+                throw error;
+            }
+            throw new InternalServerErrorException("An error occured while signing up");
         }
 
-        const hashedPassword = await argon.hash(dto.password);
-
-        const superAdmin = await this.prisma.admins.create({
-            data : {
-                firstName : dto.firstName,
-                lastName : dto.lastName,
-                email : dto.email,
-                password : hashedPassword
-            }
-        })
-
-        const adminPermissions = await this.prisma.permissions.create({
-            data : {
-                adminId : superAdmin.id,
-                permissionType : PermissionType.admin,
-                create : true,
-                read : true,
-                update : true,
-                delete : true
-            }
-        })
-
-        const productPermissions = await this.prisma.permissions.create({
-            data : {
-                adminId : superAdmin.id,
-                permissionType : PermissionType.product,
-                create : true,
-                read : true,
-                update : true,
-                delete : true
-            }
-        })
-
-        const clientPermissions = await this.prisma.permissions.create({
-            data : {
-                adminId : superAdmin.id,
-                permissionType : PermissionType.client,
-                create : true,
-                read : true,
-                update : true,
-                delete : true
-            }
-        })
-
-        delete superAdmin.password
-
-        return {
-            message : "You have signed up as the super admin. Congratulations!",
-            admin : superAdmin,
-            adminPermissions : adminPermissions,
-            productPermissions : productPermissions,
-            clientPermissions : clientPermissions
-        }
     }
 
-    async adminSignin(dto : AdminSigninDto) {
+    async adminSignin(dto: AdminSigninDto) {
         const admin = await this.prisma.admins.findUnique({
             where: {
-                email : dto.email
+                email: dto.email
             }
         })
 
-        if(!admin){
+        if (!admin) {
             throw new ForbiddenException("There is no admin with this email")
         }
 
-        if(!await argon.verify(admin.password, dto.password)){
+        if (!await argon.verify(admin.password, dto.password)) {
             throw new ForbiddenException("Password is incorrect")
         }
-        
+
         return {
-            access_token : await this.signAdminToken(admin, "admin")
+            access_token: await this.signAdminToken(admin, "admin")
         }
     }
 
-    async signAdminToken(admin : Admins, role : string) {
+    async signAdminToken(admin: Admins, role: string) {
         delete admin.password
         const payload = {
-            sub : admin.id,
-            email : admin.email,
-            role : role
+            sub: admin.id,
+            email: admin.email,
+            role: role
         }
         const secret = this.config.get('SECRET_KEY')
         const token = await this.jwt.signAsync(
             payload,
             {
-                expiresIn : '15m',
-                secret : secret
+                expiresIn: '15m',
+                secret: secret
             }
         )
         return token;
