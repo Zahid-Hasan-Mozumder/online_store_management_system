@@ -77,3 +77,46 @@ export class AdminSigninDto {
     })
     password: string;
 }
+
+export class ClientSignupDto {
+    @ApiProperty({description : "First name of the customer", required: false})
+    @IsOptional()
+    @IsString()
+    @MaxLength(1000)
+    firstName: string;
+
+    @ApiProperty({description : "Last name of the customer", required: true})
+    @IsNotEmpty()
+    @IsString()
+    @MaxLength(1000)
+    lastName: string;
+
+    @ApiProperty({description : "Email of the customer", required: true})
+    @IsNotEmpty()
+    @IsEmail()
+    email: string;
+
+    @ApiProperty({description: "Password of the customer (Only : a-z A-Z 0-9 @ ! # - _)", required: true})
+    @IsNotEmpty()
+    @IsString()
+    @Matches(/^[a-zA-Z0-9@!#-_]+$/, {
+        message: "Only @ ! # - _ alphanumeric characters are allowed"
+    })
+    password: string;
+}
+
+export class ClientSigninDto {
+
+    @ApiProperty({description : "Email of the customer", required: true})
+    @IsNotEmpty()
+    @IsEmail()
+    email: string;
+
+    @ApiProperty({description: "Password of the customer (Only : a-z A-Z 0-9 @ ! # - _)", required: true})
+    @IsNotEmpty()
+    @IsString()
+    @Matches(/^[a-zA-Z0-9@!#-_]+$/, {
+        message: "Only @ ! # - _ alphanumeric characters are allowed"
+    })
+    password: string;
+}

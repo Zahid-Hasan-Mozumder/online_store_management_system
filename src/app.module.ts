@@ -8,6 +8,7 @@ import { MulterModule } from '@nestjs/platform-express';
 import { VarientModule } from './varient/varient.module';
 import { CollectionModule } from './collection/collection.module';
 import { TagModule } from './tag/tag.module';
+import { CartModule } from './cart/cart.module';
 
 @Module({
   imports: [
@@ -16,7 +17,7 @@ import { TagModule } from './tag/tag.module';
     }),
     MulterModule.register(),
     AuthModule,
-    PrismaModule, AdminModule, ProductModule, VarientModule, CollectionModule, TagModule
+    PrismaModule, AdminModule, ProductModule, VarientModule, CollectionModule, TagModule, CartModule
   ]
 })
 export class AppModule { }

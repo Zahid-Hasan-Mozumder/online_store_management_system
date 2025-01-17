@@ -1,11 +1,11 @@
-import { ForbiddenException, HttpException, Injectable, InternalServerErrorException } from "@nestjs/common";
-import { AdminSigninDto, AdminSignupDto } from "./dto";
+import { ConflictException, ForbiddenException, HttpException, Injectable, InternalServerErrorException } from "@nestjs/common";
+import { AdminSigninDto, AdminSignupDto, ClientSigninDto, ClientSignupDto } from "./dto";
 import { PrismaService } from "../prisma/prisma.service";
 import * as argon from "argon2";
-import { Admins } from "@prisma/client";
+import { Admins, Clients } from "@prisma/client";
 import { ConfigService } from "@nestjs/config";
 import { JwtService } from "@nestjs/jwt";
-import { PermissionType } from "./enum";
+import { CustomerStatus, PermissionType } from "./enum";
 
 @Injectable()
 export class AuthService {
@@ -86,7 +86,7 @@ export class AuthService {
             if (error instanceof HttpException) {
                 throw error;
             }
-            throw new InternalServerErrorException("An error occured while signing up");
+            throw new InternalServerErrorException("An error occured while signing up as admin");
         }
 
     }
@@ -116,6 +116,77 @@ export class AuthService {
         const payload = {
             sub: admin.id,
             email: admin.email,
+            role: role
+        }
+        const secret = this.config.get('SECRET_KEY')
+        const token = await this.jwt.signAsync(
+            payload,
+            {
+                expiresIn: '15m',
+                secret: secret
+            }
+        )
+        return token;
+    }
+
+    async clientSignup (dto : ClientSignupDto) {
+        try {
+            const result = await this.prisma.$transaction(async (tx) => {
+                const client = await tx.clients.findUnique({
+                    where : {
+                        email : dto.email
+                    }
+                })
+                if(client){
+                    throw new ConflictException("Customer already exist with this email")
+                }
+                const hashedPassword = await argon.hash(dto.password)
+                const newClient = await tx.clients.create({
+                    data : {
+                        firstName : dto.firstName,
+                        lastName : dto.lastName,
+                        email : dto.email,
+                        password : hashedPassword,
+                        status : CustomerStatus.active
+                    }
+                })
+                delete newClient.password;
+                return newClient;
+            })
+            return result;
+        } catch (error) {
+            if (error instanceof HttpException) {
+                throw error;
+            }
+            throw new InternalServerErrorException("An error occured while signing up as customer");
+        }
+    }
+
+    async clientSignin(dto: ClientSigninDto) {
+        const client = await this.prisma.clients.findUnique({
+            where: {
+                email: dto.email
+            }
+        })
+
+        if (!client) {
+            throw new ForbiddenException("There is no customer with this email")
+        }
+
+        if (!await argon.verify(client.password, dto.password)) {
+            throw new ForbiddenException("Password is incorrect")
+        }
+
+        return {
+            access_token: await this.signClientToken(client, "client")
+        }
+    }
+
+    async signClientToken(client: Clients, role: string) {
+        delete client.password
+        const payload = {
+            sub: client.id,
+            email: client.email,
             role: role
         }
         const secret = this.config.get('SECRET_KEY')
