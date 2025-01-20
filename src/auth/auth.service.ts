@@ -1,11 +1,12 @@
-import { ConflictException, ForbiddenException, HttpException, Injectable, InternalServerErrorException } from "@nestjs/common";
-import { AdminSigninDto, AdminSignupDto, ClientSigninDto, ClientSignupDto } from "./dto";
+import { ConflictException, ForbiddenException, HttpException, Injectable, InternalServerErrorException, UnprocessableEntityException } from "@nestjs/common";
+import { AdminSigninDto, AdminSignupDto, ClientActivateDto, ClientSigninDto, ClientSignupDto } from "./dto";
 import { PrismaService } from "../prisma/prisma.service";
 import * as argon from "argon2";
 import { Admins, Clients } from "@prisma/client";
 import { ConfigService } from "@nestjs/config";
 import { JwtService } from "@nestjs/jwt";
 import { CustomerStatus, PermissionType } from "./enum";
+import { ClientStatus } from "src/cart/enum";
 
 @Injectable()
 export class AuthService {
@@ -173,6 +174,10 @@ export class AuthService {
             throw new ForbiddenException("There is no customer with this email")
         }
 
+        if(client.status === ClientStatus.inactive) {
+            throw new UnprocessableEntityException("You need to activate your account");
+        }
+
         if (!await argon.verify(client.password, dto.password)) {
             throw new ForbiddenException("Password is incorrect")
         }
@@ -198,5 +203,21 @@ export class AuthService {
             }
         )
         return token;
+    }
+
+    async clientActivate(dto : ClientActivateDto) {
+        const hashedPassword = await argon.hash(dto.password)
+        const updatedClient = await this.prisma.clients.update({
+            where : { email : dto.email },
+            data : {
+                firstName : dto.firstName,
+                lastName : dto.lastName,
+                email : dto.email,
+                password : hashedPassword,
+                status : CustomerStatus.active
+            }
+        })
+        delete updatedClient.password;
+        return updatedClient;
     }
 }

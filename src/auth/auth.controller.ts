@@ -1,7 +1,8 @@
 import { Body, Controller, Post } from "@nestjs/common";
 import { AuthService } from "./auth.service";
-import { AdminSigninDto, AdminSignupDto, ClientSigninDto, ClientSignupDto } from "./dto";
+import { AdminSigninDto, AdminSignupDto, ClientActivateDto, ClientSigninDto, ClientSignupDto } from "./dto";
 import { ApiTags } from "@nestjs/swagger";
+import { AuthorizeAdmin } from "src/admin/decorator";
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -27,5 +28,11 @@ export class AuthController {
     @Post('customer/signin')
     customerSignin(@Body() dto : ClientSigninDto){
         return this.authService.clientSignin(dto);
+    }
+
+    @Post('customer/activate')
+    @AuthorizeAdmin({ role: "admin", permission: "client", activity: "update" })
+    customerActivate(@Body() dto : ClientActivateDto){
+        return this.authService.clientActivate(dto);
     }
 }

@@ -54,12 +54,12 @@ model Products {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  images      Images[]
-  options     Options[]
-  varients    Varients[]
-  collections CollectionsProducts[]
-  tags        TagsProducts[]
-  cartLineItems CartLineItems[]
+  images         Images[]
+  options        Options[]
+  varients       Varients[]
+  collections    CollectionsProducts[]
+  tags           TagsProducts[]
+  cartLineItems  CartLineItems[]
   orderLineItems OrderLineItems[]
 }
 
@@ -88,12 +88,13 @@ model Varients {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  productId Int
-  images    Images[]
-  cartLineItems CartLineItems[]
+  productId      Int
+  images         Images[]
+  cartLineItems  CartLineItems[]
   orderLineItems OrderLineItems[]
 
-  product   Products @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  product Products @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
   @@unique([option1, option2, option3])
 }
 
@@ -130,7 +131,7 @@ model Tags {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
   products TagsProducts[]
 }
 
@@ -155,43 +156,43 @@ model TagsProducts {
 }
 
 model ProductCounts {
-  id Int @id @default(autoincrement())
+  id    Int @id @default(autoincrement())
   count Int @default(0)
 }
 
 model CollectionCounts {
-  id Int @id @default(autoincrement())
+  id    Int @id @default(autoincrement())
   count Int @default(0)
 }
 
 model TagCounts {
-  id Int @id @default(autoincrement())
+  id    Int @id @default(autoincrement())
   count Int @default(0)
 }
 
 model Clients {
-  id Int @id @default(autoincrement())
+  id        Int     @id @default(autoincrement())
   firstName String?
-  lastName String?
-  email String @unique
-  password String?
-  status String @default("inactive")
+  lastName  String?
+  email     String  @unique
+  password  String?
+  status    String  @default("inactive")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   address ClientAddress[]
-  carts Carts[]
-  orders Orders[]
+  carts   Carts[]
+  orders  Orders[]
 }
 
 model ClientAddress {
-  id Int @id @default(autoincrement())
-  clientId Int
-  address String?
-  city String?
-  country String?
-  zipCode Int
+  id        Int     @id @default(autoincrement())
+  clientId  Int
+  address   String?
+  city      String?
+  country   String?
+  zipCode   Int
   contactNo BigInt
 
   createdAt DateTime @default(now())
@@ -201,77 +202,77 @@ model ClientAddress {
 }
 
 model Carts {
-  id Int @id @default(autoincrement())
+  id       Int     @id @default(autoincrement())
   clientId Int
-  note String?
+  note     String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   lineItems CartLineItems[]
-  client Clients @relation(fields: [clientId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  client    Clients         @relation(fields: [clientId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 }
 
 model Orders {
-  id Int @id @default(autoincrement())
-  clientId Int
-  note String?
+  id         Int     @id @default(autoincrement())
+  clientId   Int
+  note       String?
   totalPrice Float?
-  status String?
+  status     String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  lineItems OrderLineItems[]
+  lineItems       OrderLineItems[]
   shippingAddress ShippingAddress[]
-  billingAddress BillingAddress[]
+  billingAddress  BillingAddress[]
 
   client Clients @relation(fields: [clientId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 }
 
 model CartLineItems {
-  id Int @id @default(autoincrement())
-  productId Int 
+  id        Int    @id @default(autoincrement())
+  productId Int
   varientId Int
-  cartId Int
-  vendor String
-  quantity Int
+  cartId    Int
+  vendor    String?
+  quantity  Int
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   product Products @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   varient Varients @relation(fields: [varientId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  cart Carts @relation(fields: [cartId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  cart    Carts    @relation(fields: [cartId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 }
 
 model OrderLineItems {
-  id Int @id @default(autoincrement())
-  productId Int 
+  id        Int    @id @default(autoincrement())
+  productId Int
   varientId Int
-  orderId Int
-  vendor String
-  quantity Int
-  ppp Float
-  tpp Float
+  orderId   Int
+  vendor    String
+  quantity  Int
+  ppp       Float
+  tpp       Float
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   product Products @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   varient Varients @relation(fields: [varientId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  order Orders @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  order   Orders   @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 }
 
 model ShippingAddress {
-  id Int @id @default(autoincrement())
-  orderId Int 
+  id        Int    @id @default(autoincrement())
+  orderId   Int
   firstName String
-  lastName String
-  address String
-  city String
-  country String
-  zipCode Int
+  lastName  String
+  address   String
+  city      String
+  country   String
+  zipCode   Int
   contactNo BigInt
 
   createdAt DateTime @default(now())
@@ -281,14 +282,14 @@ model ShippingAddress {
 }
 
 model BillingAddress {
-  id Int @id @default(autoincrement())
-  orderId Int 
+  id        Int    @id @default(autoincrement())
+  orderId   Int
   firstName String
-  lastName String
-  address String
-  city String
-  country String
-  zipCode Int
+  lastName  String
+  address   String
+  city      String
+  country   String
+  zipCode   Int
   contactNo BigInt
 
   createdAt DateTime @default(now())
