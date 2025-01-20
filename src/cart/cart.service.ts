@@ -1,7 +1,7 @@
 import { HttpException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { AddToCartDto, CartDeleteDto, CartDto, CartUpdateDto, ClientDto, RemoveFromCartDto } from './dto';
-import { ClientStatus } from './enum';
+import { AddToCartDto, CartCheckoutDto, CartDeleteDto, CartDto, CartUpdateDto, ClientDto, RemoveFromCartDto } from './dto';
+import { ClientStatus, OrderStatus } from './enum';
 
 @Injectable()
 export class CartService {
@@ -21,9 +21,19 @@ export class CartService {
                             status : ClientStatus.inactive
                         }
                     })
+                    const clientAddress = await tx.clientAddress.create({
+                        data : {
+                            clientId : desiredClient.id,
+                            address : null,
+                            city : null,
+                            country : null,
+                            zipCode : null,
+                            contactNo : null
+                        }
+                    })
                 }
                 delete desiredClient.password;
-
+                
                 const newCart = await tx.carts.create({
                     data : {
                         clientId : desiredClient.id,
@@ -129,6 +139,53 @@ export class CartService {
                 throw error;
             }
             throw new InternalServerErrorException("An error occured while removing from the cart");
+        }
+    }
+
+    async checkoutCart(dto : CartCheckoutDto) {
+        try {
+            const result = await this.prisma.$transaction(async (tx) => {
+                const cart = await tx.carts.findUnique({
+                    where : { id : dto.cartId },
+                    include : { lineItems : true }
+                })
+                const newOrder = await tx.orders.create({
+                    data : {
+                        clientId : cart.clientId,
+                        note : cart.note,
+                        status : OrderStatus.on
+                    }
+                })
+                let totalPrice : number = 0;
+                for(let i = 0; i < cart.lineItems.length; i++){
+                    const varient = await tx.varient.findUnique({
+                        where : { id : cart.lineItems[i].varientId }
+                    })
+                    const orderLineItem = await tx.orderLineItems.create({
+                        data : {
+                            productId : cart.productId,
+                            varientId : cart.varientId,
+                            orderId : newOrder.id,
+                            vendor : cart.lineItems[i].vendor,
+                            quantity : cart.lineItems[i].quantity,
+                            ppp : varient.price,
+                            tpp : (cart.lineItems[i].quantity * varient.price)
+                        }
+                    })
+                    totalPrice += orderLineItem.tpp;
+                }
+                const updatedOrder = await tx.orders.update({
+                    where : { id : newOrder.id},
+                    data : { totalPrice : totalPrice }
+                }) 
+                return updatedOrder;
+            })
+            return result;
+        } catch (error) {
+            if(error instanceof HttpException){
+                throw error;
+            }
+            throw new InternalServerErrorException("An error occured while checking out the cart");
         }
     }
 

@@ -125,3 +125,97 @@ export class CartDeleteDto {
     @IsNumber()
     cartId: number;
 }
+
+export class ShippingAddressDto {
+    @ApiProperty({required : false})
+    @IsOptional()
+    @IsString()
+    firstName : string;
+
+    @ApiProperty({required : true})
+    @IsNotEmpty()
+    @IsString()
+    lastName : string;
+
+    @ApiProperty({required : true})
+    @IsNotEmpty()
+    @IsString()
+    address : string;
+
+    @ApiProperty({required : true})
+    @IsNotEmpty()
+    @IsString()
+    city : string;
+
+    @ApiProperty({required : true})
+    @IsNotEmpty()
+    @IsString()
+    country : string;
+
+    @ApiProperty({required : true})
+    @IsNotEmpty()
+    @IsNumber()
+    zipCode : number;
+
+    @ApiProperty({required : true})
+    @IsNotEmpty()
+    @IsNumber()
+    contactNo : number;
+}
+
+export class BillingAddressDto {
+    @ApiProperty({required : false})
+    @IsOptional()
+    @IsString()
+    firstName : string;
+
+    @ApiProperty({required : true})
+    @IsNotEmpty()
+    @IsString()
+    lastName : string;
+
+    @ApiProperty({required : true})
+    @IsNotEmpty()
+    @IsString()
+    address : string;
+
+    @ApiProperty({required : true})
+    @IsNotEmpty()
+    @IsString()
+    city : string;
+
+    @ApiProperty({required : true})
+    @IsNotEmpty()
+    @IsString()
+    country : string;
+
+    @ApiProperty({required : true})
+    @IsNotEmpty()
+    @IsNumber()
+    zipCode : number;
+
+    @ApiProperty({required : true})
+    @IsNotEmpty()
+    @IsNumber()
+    contactNo : number;
+}
+
+export class CartCheckoutDto {
+
+    @ApiProperty({required : true})
+    @IsNotEmpty()
+    @IsNumber()
+    cartId : number;
+
+    @ApiProperty({required : true})
+    @IsNotEmpty()
+    @ValidateNested()
+    @Type(() => ShippingAddressDto)
+    shippingAddress : ShippingAddressDto;
+
+    @ApiProperty({required : true})
+    @IsNotEmpty()
+    @ValidateNested()
+    @Type(() => BillingAddressDto)
+    billingAddress : BillingAddressDto;
+}

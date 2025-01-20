@@ -152,7 +152,17 @@ export class AuthService {
                     }
                 })
                 delete newClient.password;
-                return newClient;
+                const clientAddress = await tx.clientAddress.create({
+                    data : {
+                        clientId : newClient.id,
+                        address : dto.address.address,
+                        city : dto.address.city,
+                        country : dto.address.country,
+                        zipCode : dto.address.zipCode,
+                        contactNo : dto.address.contactNo
+                    }
+                })
+                return { newClient, clientAddress };
             })
             return result;
         } catch (error) {
@@ -206,18 +216,38 @@ export class AuthService {
     }
 
     async clientActivate(dto : ClientActivateDto) {
-        const hashedPassword = await argon.hash(dto.password)
-        const updatedClient = await this.prisma.clients.update({
-            where : { email : dto.email },
-            data : {
-                firstName : dto.firstName,
-                lastName : dto.lastName,
-                email : dto.email,
-                password : hashedPassword,
-                status : CustomerStatus.active
+        try {
+            const result = await this.prisma.$transaction(async (tx) => {
+                const hashedPassword = await argon.hash(dto.password)
+                const updatedClient = await this.prisma.clients.update({
+                    where : { email : dto.email },
+                    data : {
+                        firstName : dto.firstName,
+                        lastName : dto.lastName,
+                        email : dto.email,
+                        password : hashedPassword,
+                        status : CustomerStatus.active
+                    }
+                })
+                delete updatedClient.password;
+                const clientAddress = await tx.clientAddress.create({
+                    data : {
+                        clientId : updatedClient.id,
+                        address : dto.address.address,
+                        city : dto.address.city,
+                        country : dto.address.country,
+                        zipCode : dto.address.zipCode,
+                        contactNo : dto.address.contactNo
+                    }
+                })
+                return { updatedClient, clientAddress };
+            })
+            return result;
+        } catch (error) {
+            if(error instanceof HttpException){
+                throw error;
             }
-        })
-        delete updatedClient.password;
-        return updatedClient;
+            throw new InternalServerErrorException("An error occured while activating the account");
+        }
     }
 }

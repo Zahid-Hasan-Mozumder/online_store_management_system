@@ -1,5 +1,5 @@
 import { Type } from "class-transformer";
-import { IsBoolean, IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, Matches, MaxLength } from "class-validator";
+import { IsBoolean, IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, IsNumber, Matches, MaxLength, ValidateNested } from "class-validator";
 import { PermissionType } from "../enum";
 import { ApiProperty } from "@nestjs/swagger";
 
@@ -78,6 +78,32 @@ export class AdminSigninDto {
     password: string;
 }
 
+export class ClientAddressDto {
+    @ApiProperty({required : true})
+    @IsNotEmpty()
+    @IsString()
+    address : string;
+
+    @ApiProperty({required : true})
+    @IsNotEmpty()
+    @IsString()
+    city : string;
+
+    @ApiProperty({required : true})
+    @IsNotEmpty()
+    @IsString()
+    country : string;
+
+    @ApiProperty({required : true})
+    @IsNotEmpty()
+    @IsString()
+    zipCode : string;
+
+    @ApiProperty({required : true})
+    @IsNotEmpty()
+    @IsNumber()
+    contactNo : number;
+}
 export class ClientSignupDto {
     @ApiProperty({description : "First name of the customer", required: false})
     @IsOptional()
@@ -103,6 +129,11 @@ export class ClientSignupDto {
         message: "Only @ ! # - _ alphanumeric characters are allowed"
     })
     password: string;
+
+    @IsNotEmpty()
+    @ValidateNested()
+    @Type(() => ClientAddressDto)
+    address : ClientAddressDto;
 }
 
 export class ClientSigninDto {
@@ -147,4 +178,9 @@ export class ClientActivateDto {
         message: "Only @ ! # - _ alphanumeric characters are allowed"
     })
     password : string;
+
+    @IsNotEmpty()
+    @ValidateNested()
+    @Type(() => ClientAddressDto)
+    address : ClientAddressDto;
 }

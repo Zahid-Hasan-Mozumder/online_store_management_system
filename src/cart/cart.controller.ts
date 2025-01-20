@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, Post, Put, UseGuards } from '@nestjs/common';
 import { CartService } from './cart.service';
-import { AddToCartDto, CartDeleteDto, CartDto, CartUpdateDto, ClientDto, RemoveFromCartDto } from './dto';
+import { AddToCartDto, CartCheckoutDto, CartDeleteDto, CartDto, CartUpdateDto, ClientDto, RemoveFromCartDto } from './dto';
 import { GetUser } from 'src/auth/decorator';
 import { JwtGuard } from 'src/auth/guard';
 
@@ -22,6 +22,11 @@ export class CartController {
     @Post('remove')
     removeFromCart(@Body() dto : RemoveFromCartDto){
         return this.cartService.removeFromCart(dto);
+    }
+
+    @Post('checkout')
+    checkoutCart(@Body() dto : CartCheckoutDto){
+        return this.cartService.checkoutCart(dto);
     }
 
     @Get()

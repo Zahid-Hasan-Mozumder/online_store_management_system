@@ -192,8 +192,8 @@ model ClientAddress {
   address   String?
   city      String?
   country   String?
-  zipCode   Int
-  contactNo BigInt
+  zipCode   Int?
+  contactNo BigInt?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
