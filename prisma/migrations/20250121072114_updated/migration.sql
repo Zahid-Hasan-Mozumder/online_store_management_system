@@ -1,0 +1,11 @@
+-- AlterTable
+ALTER TABLE "BillingAddress" ALTER COLUMN "zipCode" SET DATA TYPE TEXT,
+ALTER COLUMN "contactNo" SET DATA TYPE TEXT;
+
+-- AlterTable
+ALTER TABLE "ClientAddress" ALTER COLUMN "zipCode" SET DATA TYPE TEXT,
+ALTER COLUMN "contactNo" SET DATA TYPE TEXT;
+
+-- AlterTable
+ALTER TABLE "ShippingAddress" ALTER COLUMN "zipCode" SET DATA TYPE TEXT,
+ALTER COLUMN "contactNo" SET DATA TYPE TEXT;

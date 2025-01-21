@@ -101,9 +101,10 @@ export class ClientAddressDto {
 
     @ApiProperty({required : true})
     @IsNotEmpty()
-    @IsNumber()
-    contactNo : number;
+    @IsString()
+    contactNo : string;
 }
+
 export class ClientSignupDto {
     @ApiProperty({description : "First name of the customer", required: false})
     @IsOptional()

@@ -1,12 +1,17 @@
 import { HttpException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { AddToCartDto, CartCheckoutDto, CartDeleteDto, CartDto, CartUpdateDto, ClientDto, RemoveFromCartDto } from './dto';
-import { ClientStatus, OrderStatus } from './enum';
+import { CartStatus, ClientStatus, OrderStatus } from './enum';
+import { RouteService } from '../route/route.service';
+import { RouteOrderDto } from 'src/route/dto';
 
 @Injectable()
 export class CartService {
     
-    constructor(private prisma : PrismaService) {}
+    constructor(
+        private prisma : PrismaService,
+        private routeService : RouteService
+    ) {}
 
     async createCart(dto : CartDto) {
         try {
@@ -38,6 +43,7 @@ export class CartService {
                     data : {
                         clientId : desiredClient.id,
                         note : dto.note,
+                        status : CartStatus.active
                     }
                 })
 
@@ -158,13 +164,13 @@ export class CartService {
                 })
                 let totalPrice : number = 0;
                 for(let i = 0; i < cart.lineItems.length; i++){
-                    const varient = await tx.varient.findUnique({
+                    const varient = await tx.varients.findUnique({
                         where : { id : cart.lineItems[i].varientId }
                     })
                     const orderLineItem = await tx.orderLineItems.create({
                         data : {
-                            productId : cart.productId,
-                            varientId : cart.varientId,
+                            productId : cart.lineItems[i].productId,
+                            varientId : cart.lineItems[i].varientId,
                             orderId : newOrder.id,
                             vendor : cart.lineItems[i].vendor,
                             quantity : cart.lineItems[i].quantity,
@@ -174,12 +180,47 @@ export class CartService {
                     })
                     totalPrice += orderLineItem.tpp;
                 }
+                await tx.shippingAddress.create({
+                    data : {
+                        orderId : newOrder.id,
+                        firstName : dto.shippingAddress.firstName,
+                        lastName : dto.shippingAddress.lastName,
+                        address : dto.shippingAddress.address,
+                        city : dto.shippingAddress.city,
+                        country : dto.shippingAddress.country,
+                        zipCode : dto.shippingAddress.zipCode,
+                        contactNo : dto.shippingAddress.contactNo
+                    }
+                })
+                await tx.billingAddress.create({
+                    data : {
+                        orderId : newOrder.id,
+                        firstName : dto.billingAddress.firstName,
+                        lastName : dto.billingAddress.lastName,
+                        address : dto.billingAddress.address,
+                        city : dto.billingAddress.city,
+                        country : dto.billingAddress.country,
+                        zipCode : dto.billingAddress.zipCode,
+                        contactNo : dto.billingAddress.contactNo
+                    }
+                })
                 const updatedOrder = await tx.orders.update({
                     where : { id : newOrder.id},
-                    data : { totalPrice : totalPrice }
+                    data : { totalPrice : totalPrice },
+                    include : { 
+                        lineItems : true,
+                        shippingAddress : true,
+                        billingAddress : true 
+                    }
                 }) 
+                const updatedCart = await tx.carts.update({
+                    where : { id : dto.cartId },
+                    data : { status : CartStatus.inactive }
+                })
+
                 return updatedOrder;
             })
+            
             return result;
         } catch (error) {
             if(error instanceof HttpException){
@@ -194,22 +235,26 @@ export class CartService {
             where : { id : user.id },
             include : { carts : true }
         })
-        return client.carts[client.carts.length - 1];
+        if(!client.carts[client.carts.length - 1] || client.carts[client.carts.length - 1].status === CartStatus.inactive){
+            throw new NotFoundException("No carts to show");
+        }
+        const cart = await this.prisma.carts.findUnique({
+            where : { id : client.carts[client.carts.length - 1].id},
+            include : { lineItems : true }
+        })
+        return cart;
     }
 
     async updateCart(user : ClientDto, dto : CartUpdateDto) {
         try {
             const result = await this.prisma.$transaction(async (tx) => {
 
-                await tx.carts.update({
+                const updatedCart = await tx.carts.update({
                     where : { id : dto.cartId },
                     data : {
-                        note : dto.note
-                    }
-                })
-                
-                const updatedCart = await tx.carts.findUnique({
-                    where : { id : dto.cartId },
+                        note : dto.note,
+                        status : dto.status
+                    },
                     include : { lineItems : true }
                 })
 
@@ -219,7 +264,7 @@ export class CartService {
                     })
                 }
 
-                for(let i = 0; i < dto.cartLineItems.length; i++) {
+                for(let i = 0; dto.cartLineItems && (i < dto.cartLineItems.length); i++) {
                     const currentProduct = await tx.products.findUnique({
                         where : { id : dto.cartLineItems[i].productId },
                         include : { varients : true }

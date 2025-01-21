@@ -9,6 +9,8 @@ import { VarientModule } from './varient/varient.module';
 import { CollectionModule } from './collection/collection.module';
 import { TagModule } from './tag/tag.module';
 import { CartModule } from './cart/cart.module';
+import { RouteModule } from './route/route.module';
+import { OrderModule } from './order/order.module';
 
 @Module({
   imports: [
@@ -17,7 +19,7 @@ import { CartModule } from './cart/cart.module';
     }),
     MulterModule.register(),
     AuthModule,
-    PrismaModule, AdminModule, ProductModule, VarientModule, CollectionModule, TagModule, CartModule
+    PrismaModule, AdminModule, ProductModule, VarientModule, CollectionModule, TagModule, CartModule, RouteModule, OrderModule
   ]
 })
 export class AppModule { }

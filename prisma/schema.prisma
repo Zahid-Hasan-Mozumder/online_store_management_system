@@ -192,8 +192,8 @@ model ClientAddress {
   address   String?
   city      String?
   country   String?
-  zipCode   Int?
-  contactNo BigInt?
+  zipCode   String?
+  contactNo String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -202,10 +202,10 @@ model ClientAddress {
 }
 
 model Carts {
-  id       Int     @id @default(autoincrement())
-  clientId Int
-  note     String?
-
+  id        Int      @id @default(autoincrement())
+  clientId  Int
+  note      String?
+  status    String?  @default("active")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -224,14 +224,15 @@ model Orders {
   updatedAt DateTime @updatedAt
 
   lineItems       OrderLineItems[]
-  shippingAddress ShippingAddress[]
-  billingAddress  BillingAddress[]
+  shippingAddress ShippingAddress?
+  billingAddress  BillingAddress?
+  placedOrder     PlacedOrders?
 
   client Clients @relation(fields: [clientId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 }
 
 model CartLineItems {
-  id        Int    @id @default(autoincrement())
+  id        Int     @id @default(autoincrement())
   productId Int
   varientId Int
   cartId    Int
@@ -266,14 +267,14 @@ model OrderLineItems {
 
 model ShippingAddress {
   id        Int    @id @default(autoincrement())
-  orderId   Int
+  orderId   Int @unique
   firstName String
   lastName  String
   address   String
   city      String
   country   String
-  zipCode   Int
-  contactNo BigInt
+  zipCode   String
+  contactNo String
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -283,17 +284,52 @@ model ShippingAddress {
 
 model BillingAddress {
   id        Int    @id @default(autoincrement())
-  orderId   Int
+  orderId   Int @unique
   firstName String
   lastName  String
   address   String
   city      String
   country   String
-  zipCode   Int
-  contactNo BigInt
+  zipCode   String
+  contactNo String
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   order Orders @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+}
+
+model PlacedOrders {
+  id                  Int     @id @default(autoincrement())
+  uuid                String
+  name                String
+  email               String
+  phone               String
+  instructions        String
+  isScheduled         Boolean
+  isCompleted         Boolean
+  displayOrderId      String
+  routificOrderNumber String
+  customerOrderNumber Int     @unique
+  workspaceId         Int
+  status              String
+
+  order Orders @relation(fields: [customerOrderNumber], references: [id], onDelete: Cascade, onUpdate: Cascade)
+}
+
+model TimeWindows {
+  id        Int     @id @default(autoincrement())
+  uuid      String  @unique
+  startTime String?
+  endTime   String?
+}
+
+model Locations {
+  id        Int     @id @default(autoincrement())
+  uuid      String  @unique
+  address   String?
+  latitude  Float?
+  longitude Float?
+  timezone  String?
+  status    String?
 }

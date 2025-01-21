@@ -154,13 +154,13 @@ export class ShippingAddressDto {
 
     @ApiProperty({required : true})
     @IsNotEmpty()
-    @IsNumber()
-    zipCode : number;
+    @IsString()
+    zipCode : string;
 
     @ApiProperty({required : true})
     @IsNotEmpty()
-    @IsNumber()
-    contactNo : number;
+    @IsString()
+    contactNo : string;
 }
 
 export class BillingAddressDto {
@@ -191,13 +191,13 @@ export class BillingAddressDto {
 
     @ApiProperty({required : true})
     @IsNotEmpty()
-    @IsNumber()
-    zipCode : number;
+    @IsString()
+    zipCode : string;
 
     @ApiProperty({required : true})
     @IsNotEmpty()
-    @IsNumber()
-    contactNo : number;
+    @IsString()
+    contactNo : string;
 }
 
 export class CartCheckoutDto {
