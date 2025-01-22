@@ -219,6 +219,7 @@ model Orders {
   note       String?
   totalPrice Float?
   status     String?
+  isPlaced   Boolean @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -267,7 +268,7 @@ model OrderLineItems {
 
 model ShippingAddress {
   id        Int    @id @default(autoincrement())
-  orderId   Int @unique
+  orderId   Int    @unique
   firstName String
   lastName  String
   address   String
@@ -284,7 +285,7 @@ model ShippingAddress {
 
 model BillingAddress {
   id        Int    @id @default(autoincrement())
-  orderId   Int @unique
+  orderId   Int    @unique
   firstName String
   lastName  String
   address   String

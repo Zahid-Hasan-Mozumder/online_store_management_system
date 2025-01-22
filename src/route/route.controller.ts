@@ -20,6 +20,6 @@ export class RouteController {
     @Put('update')
     @AuthorizeAdmin({ role : "admin", permission: "product", activity : "update"})
     updateOrders() {
-        return this.routeService.updateOrders(); 
+        return this.routeService.updatePlacedOrdersStatus(); 
     }
 }

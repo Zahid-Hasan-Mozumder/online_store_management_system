@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { catchError, firstValueFrom } from 'rxjs';
 import { RouteOrderDto } from './dto';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { PlacedOrderStatus } from './enum';
 
 @Injectable()
 export class RouteService {
@@ -46,118 +47,194 @@ export class RouteService {
         }
     }
 
+    private async getUnplacedOrders() {
+        const orders = await this.prisma.orders.findMany({
+            where: { isPlaced: false },
+            include: {
+                shippingAddress: true
+            }
+        });
+        return orders;
+    }
+
+    private async createRouteOrders(unplacedOrder: any) {
+        const client = await this.prisma.clients.findUnique({
+            where: { id: unplacedOrder.clientId }
+        })
+
+        const shippingAddress = unplacedOrder.shippingAddress;
+        const routeAddress = `${shippingAddress.address}, ${shippingAddress.city}, ${shippingAddress.country} - ${shippingAddress.zipCode}`;
+
+        const routeOrder: RouteOrderDto = {
+            name: "OSMS",
+            locations: [
+                {
+                    address: routeAddress
+                }
+            ],
+            phone: shippingAddress.contactNo,
+            email: client.email,
+            duration: 0,
+            load: 1,
+            instructions: unplacedOrder.note || "",
+            timeWindows: [],
+            customerOrderNumber: String(unplacedOrder.id)
+        }
+
+        return routeOrder;
+    }
+
+    private async saveOrderData(orderData: any) {
+        // Save time windows
+        await Promise.all(orderData.timeWindows.map(window =>
+            this.prisma.timeWindows.create({
+                data: {
+                    uuid: orderData.uuid,
+                    startTime: window.startTime,
+                    endTime: window.endTime
+                }
+            })
+        ));
+
+        // Save locations
+        await Promise.all(orderData.locations.map(location =>
+            this.prisma.locations.create({
+                data: {
+                    uuid: orderData.uuid,
+                    address: location.address,
+                    latitude: location.latitude,
+                    longitude: location.longitude,
+                    timezone: location.timezone,
+                    status: location.status
+                }
+            })
+        ));
+
+        // Create placed order
+        const placedOrder = await this.prisma.placedOrders.create({
+            data: {
+                uuid: orderData.uuid,
+                name: orderData.name,
+                email: orderData.email,
+                phone: orderData.phone,
+                instructions: orderData.instructions,
+                isScheduled: orderData.isScheduled,
+                isCompleted: orderData.isCompleted,
+                displayOrderId: orderData.displayOrderId,
+                routificOrderNumber: orderData.routificOrderNumber,
+                customerOrderNumber: Number(orderData.customerOrderNumber),
+                workspaceId: orderData.workspaceId,
+                status: orderData.status
+            }
+        });
+
+        // Update original order
+        await this.prisma.orders.update({
+            where: { id: Number(orderData.customerOrderNumber) },
+            data: { isPlaced: true }
+        });
+
+        return placedOrder;
+    }
+
+    private async updateOrderData(orderData: any) {
+        // Update time windows
+        await Promise.all(orderData.timeWindows.map(window =>
+            this.prisma.timeWindows.update({
+                where: { uuid: orderData.uuid },
+                data: {
+                    startTime: window.startTime,
+                    endTime: window.endTime
+                }
+            })
+        ));
+
+        // Update locations
+        await Promise.all(orderData.locations.map(location =>
+            this.prisma.locations.update({
+                where: { uuid: orderData.uuid },
+                data: {
+                    address: location.address,
+                    latitude: location.latitude,
+                    longitude: location.longitude,
+                    timezone: location.timezone,
+                    status: location.status
+                }
+            })
+        ));
+
+        // Update placed order
+        const placedOrder = await this.prisma.placedOrders.update({
+            where: { customerOrderNumber: Number(orderData.customerOrderNumber) },
+            data: {
+                name: orderData.name,
+                email: orderData.email,
+                phone: orderData.phone,
+                instructions: orderData.instructions,
+                isScheduled: orderData.isScheduled,
+                isCompleted: orderData.isCompleted,
+                displayOrderId: orderData.displayOrderId,
+                routificOrderNumber: orderData.routificOrderNumber,
+                status: orderData.status
+            }
+        });
+
+        return placedOrder;
+    }
+
+    async getNonUpdatedPlacedOrders() {
+        const nonUpdatedPlacedOrders = await this.prisma.placedOrders.findMany({
+            where: {
+                status: {
+                    in: [PlacedOrderStatus.scheduled, PlacedOrderStatus.notScheduled]
+                }
+            }
+        })
+        return nonUpdatedPlacedOrders;
+    }
+
     async processOrders() {
         try {
-            const result = await this.prisma.$transaction(async (tx) => {
-                const url = `${this.baseUrl}/v1/orders?workspaceId=${this.id}`;
-                const headers = {
-                    Authorization: `bearer ${this.apiKey}`,
-                    accept: "application/json",
-                    "Content-Type": "application/json"
-                };
-                let body: RouteOrderDto[] = [];
 
-                // Process or Posting orders
-                const orders = await tx.orders.findMany({
-                    include : {
-                        placedOrder : true,
-                        shippingAddress : true,
-                        billingAddress : true
-                    }
-                });
+            const url = `${this.baseUrl}/v1/orders?workspaceId=${this.id}`;
+            const headers = {
+                Authorization: `bearer ${this.apiKey}`,
+                accept: "application/json",
+                "Content-Type": "application/json"
+            };
 
-                if(!orders.length){
-                    throw new NotFoundException("No order found to process")
-                }
+            // Fetching unprocessed orders
+            const unplacedOrders = await this.getUnplacedOrders()
 
-                const client = await tx.clients.findUnique({
-                    where : { id : orders[0].clientId }
-                })
+            const body = await Promise.all(
+                unplacedOrders.map(unplacedOrder => this.createRouteOrders(unplacedOrder))
+            )
 
-                for(let i = 0; i < orders.length; i++){
-                    if(orders[i].placedOrder !== null) continue;
-
-                    const shippingAddress = orders[i].shippingAddress;
-                    const routeAddress = `${shippingAddress.address}, ${shippingAddress.city}, ${shippingAddress.country} - ${shippingAddress.zipCode}`;
-
-                    const routeOrder : RouteOrderDto = {
-                        name: "OSMS",
-                        locations: [
-                            {
-                                address: routeAddress
-                            }
-                        ],
-                        phone: shippingAddress.contactNo,
-                        email: client.email,
-                        duration: 0,
-                        load: 1,
-                        instructions: (orders[i].note) ? orders[i].note : "",
-                        timeWindows: [],
-                        customerOrderNumber: String(orders[i].id)
-                    }
-
-                    body.push(routeOrder);
-                }
-
-                const response = await firstValueFrom(
-                    this.httpService.post(url, body, { headers }).pipe(
-                        catchError((error) => {
-                            // console.dir(error.response.data, {depth: null});
-                            throw new UnprocessableEntityException("Unable to process orders");
-                        })
-                    )
-                )
-
-                // Saving the placed orders information into database
-                let allPlacedOrders = [];
-                for(let i = 0; i < response.data.length; i++){
-
-                    const curRes = await this.fetchOrder(response.data[i].uuid);
-
-                    for(let j = 0; j < curRes.timeWindows.length; j++){
-                        await tx.timeWindows.create({
-                            data : {
-                                uuid : curRes.uuid,
-                                startTime : curRes.timeWindows[j].startTime,
-                                endTime : curRes.timeWindows[j].endTime
-                            }
-                        })
-                    }
-                    for(let j = 0; j < curRes.locations.length; j++){
-                        await tx.locations.create({
-                            data : {
-                                uuid : curRes.uuid,
-                                address : curRes.locations[j].address,
-                                latitude : curRes.locations[j].latitude,
-                                longitude : curRes.locations[j].longitude,
-                                timezone : curRes.locations[j].timezone,
-                                status : curRes.locations[j].status
-                            }
-                        })
-                    }
-                    const placedOrder = await tx.placedOrders.create({
-                        data : {
-                            uuid : curRes.uuid,
-                            name : curRes.name,
-                            email : curRes.email,
-                            phone : curRes.phone,
-                            instructions : curRes.instructions,
-                            isScheduled : curRes.isScheduled,
-                            isCompleted : curRes.isCompleted,
-                            displayOrderId : curRes.displayOrderId,
-                            routificOrderNumber : curRes.routificOrderNumber,
-                            customerOrderNumber : Number(curRes.customerOrderNumber),
-                            workspaceId : curRes.workspaceId,
-                            status : curRes.status
-                        }
+            // Posting unplaced orders for routing
+            const response = await firstValueFrom(
+                this.httpService.post(url, body, { headers }).pipe(
+                    catchError((error) => {
+                        // console.dir(error.response.data, {depth: null});
+                        throw new UnprocessableEntityException("Unable to process orders");
                     })
-                    allPlacedOrders.push(placedOrder);
-                }
-                
-                return allPlacedOrders;
-            })
+                )
+            )
 
-            return result;
+            // Saving the routed orders information into database
+            const placedOrders = await Promise.allSettled(
+                response.data.map(async (orderData) => {
+                    try {
+                        const curRes = await this.fetchOrder(orderData.uuid);
+                        console.log(curRes);
+                        return this.saveOrderData(curRes);
+                    } catch (error) {
+                        console.log(`Error while saving placed order's information in the database ${orderData.uuid}`);
+                    }
+                })
+            );
+            const successfulPlacedOrders = placedOrders.filter(result => result.status === "fulfilled").map(result => result.value);
+            return successfulPlacedOrders;
+
         } catch (error) {
             if (error instanceof HttpException) {
                 throw error;
@@ -166,59 +243,28 @@ export class RouteService {
         }
     }
 
-    async updateOrders(){
-        try {
-            const result = await this.prisma.$transaction(async (tx) => {
-                let updatedPlacedOrders = [];
-                const placedOrders = await tx.placedOrders.findMany();
-                for(let i = 0; i < placedOrders.length; i++){
-                    const curRes = await this.fetchOrder(placedOrders[i].uuid);
+    async updatePlacedOrdersStatus() {
 
-                    for(let j = 0; j < curRes.timeWindows.length; j++){
-                        await tx.timeWindows.update({
-                            where : { uuid : placedOrders[i].uuid},
-                            data : {
-                                startTime : curRes.timeWindows[j].startTime,
-                                endTime : curRes.timeWindows[j].endTime
-                            }
-                        })
+        const nonUpdatedPlacedOrders = await this.getNonUpdatedPlacedOrders();
+
+        try {
+            // Updating the routed orders information into database
+            const updatedPlacedOrders = await Promise.allSettled(
+                nonUpdatedPlacedOrders.map(async (orderData) => {
+                    try {
+                        const curRes = await this.fetchOrder(orderData.uuid);
+                        return this.updateOrderData(curRes);
+                    } catch (error) {
+                        console.log(`Error while saving updating order's information in the database ${orderData.uuid}`);
                     }
-                    for(let j = 0; j < curRes.locations.length; j++){
-                        await tx.locations.update({
-                            where : { uuid : placedOrders[i].uuid},
-                            data : {
-                                address : curRes.locations[j].address,
-                                latitude : curRes.locations[j].latitude,
-                                longitude : curRes.locations[j].longitude,
-                                timezone : curRes.locations[j].timezone,
-                                status : curRes.locations[j].status
-                            }
-                        })
-                    }
-                    const updatedPlacedOrder = await tx.placedOrders.update({
-                        where : { id : placedOrders[i].id },
-                        data : {
-                            name : curRes.name,
-                            email : curRes.email,
-                            phone : curRes.phone,
-                            instructions : curRes.instructions,
-                            isScheduled : curRes.isScheduled,
-                            isCompleted : curRes.isCompleted,
-                            displayOrderId : curRes.displayOrderId,
-                            routificOrderNumber : curRes.routificOrderNumber,
-                            status : curRes.status
-                        }
-                    })
-                    updatedPlacedOrders.push(updatedPlacedOrder);
-                }
-                return updatedPlacedOrders;
-            })
-            return result;
+                })
+            );
+            return updatedPlacedOrders;
         } catch (error) {
             if (error instanceof HttpException) {
                 throw error;
             }
-            throw new InternalServerErrorException("An error occured while processing orders")
+            throw new InternalServerErrorException("An error occured while updating orders")
         }
     }
 }

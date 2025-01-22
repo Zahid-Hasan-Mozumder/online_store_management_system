@@ -155,6 +155,7 @@ export class CartService {
                     where : { id : dto.cartId },
                     include : { lineItems : true }
                 })
+                
                 const newOrder = await tx.orders.create({
                     data : {
                         clientId : cart.clientId,
@@ -162,6 +163,7 @@ export class CartService {
                         status : OrderStatus.on
                     }
                 })
+
                 let totalPrice : number = 0;
                 for(let i = 0; i < cart.lineItems.length; i++){
                     const varient = await tx.varients.findUnique({
@@ -170,9 +172,9 @@ export class CartService {
                     const orderLineItem = await tx.orderLineItems.create({
                         data : {
                             productId : cart.lineItems[i].productId,
-                            varientId : cart.lineItems[i].varientId,
+                            varientId : varient.id,
                             orderId : newOrder.id,
-                            vendor : cart.lineItems[i].vendor,
+                            vendor : cart.lineItems[i].vendor || "",
                             quantity : cart.lineItems[i].quantity,
                             ppp : varient.price,
                             tpp : (cart.lineItems[i].quantity * varient.price)
@@ -180,6 +182,7 @@ export class CartService {
                     })
                     totalPrice += orderLineItem.tpp;
                 }
+
                 await tx.shippingAddress.create({
                     data : {
                         orderId : newOrder.id,
@@ -192,6 +195,7 @@ export class CartService {
                         contactNo : dto.shippingAddress.contactNo
                     }
                 })
+
                 await tx.billingAddress.create({
                     data : {
                         orderId : newOrder.id,
@@ -204,6 +208,7 @@ export class CartService {
                         contactNo : dto.billingAddress.contactNo
                     }
                 })
+
                 const updatedOrder = await tx.orders.update({
                     where : { id : newOrder.id},
                     data : { totalPrice : totalPrice },
@@ -213,6 +218,7 @@ export class CartService {
                         billingAddress : true 
                     }
                 }) 
+
                 const updatedCart = await tx.carts.update({
                     where : { id : dto.cartId },
                     data : { status : CartStatus.inactive }
