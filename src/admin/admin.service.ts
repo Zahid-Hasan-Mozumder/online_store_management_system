@@ -10,21 +10,22 @@ export class AdminService {
     constructor(private prisma: PrismaService) { }
 
     async createAdmin(user: AdminDto, dto: CreateAdminDto) {
+        
+        // Check whether the admin already exist or not
+        const alreadyExistAdmin = await this.prisma.admins.findUnique({
+            where: { email: dto.email }
+        })
 
+        if (alreadyExistAdmin) {
+            throw new ConflictException("Admin already exist with this email");
+        }
+
+        // Hashing the password using argon
+        const hashedPassword = await argon.hash(dto.password);
+
+        // Saving new admin to the database with all the permissions
         try {
             const result = await this.prisma.$transaction(async (tx) => {
-                const alreadyExistAdmin = await tx.admins.findUnique({
-                    where: {
-                        email: dto.email
-                    }
-                })
-
-                if (alreadyExistAdmin) {
-                    throw new ConflictException("Admin already exist with this email");
-                }
-
-                const hashedPassword = await argon.hash(dto.password);
-
                 const newAdmin = await tx.admins.create({
                     data: {
                         firstName: dto.firstName,
@@ -33,7 +34,6 @@ export class AdminService {
                         password: hashedPassword
                     }
                 })
-
                 const adminPermissions = await tx.permissions.create({
                     data: {
                         adminId: newAdmin.id,
@@ -44,7 +44,6 @@ export class AdminService {
                         delete: dto.adminPermissions.delete
                     }
                 })
-
                 const productPermissions = await tx.permissions.create({
                     data: {
                         adminId: newAdmin.id,
@@ -55,7 +54,6 @@ export class AdminService {
                         delete: dto.productPermissions.delete
                     }
                 })
-
                 const clientPermissions = await tx.permissions.create({
                     data: {
                         adminId: newAdmin.id,
@@ -66,9 +64,7 @@ export class AdminService {
                         delete: dto.clientPermissions.delete
                     }
                 })
-
                 delete newAdmin.password;
-
                 return {
                     message: "Admin created successfully",
                     admin: newAdmin,
@@ -77,24 +73,21 @@ export class AdminService {
                     clientPermissions: clientPermissions
                 }
             })
-
             return result;
         } catch (error) {
-            if (error instanceof HttpException) {
-                throw error;
-            }
-            throw new InternalServerErrorException("An error occured while creating the admin");
+            throw error instanceof HttpException ? error : new InternalServerErrorException("An error occured while creating the admin");
         }
 
     }
 
     async getAdmins(user: AdminDto, pagination: PaginationDto) {
-
         const page = Number(pagination.page);
         const limit = Number(pagination.limit);
 
+        // Fetching all the admins information from the database
         const admins = await this.prisma.admins.findMany()
 
+        // Pagination information
         const paginationInfo = {
             totalPage: Math.ceil(admins.length / limit),
             totalItems: admins.length,
@@ -104,8 +97,8 @@ export class AdminService {
             nextPage: (page === Math.ceil(admins.length / limit)) ? null : `/admins?page=${page + 1}&limit=${limit}`
         }
 
+        // Processing admins information based on pagination and security
         const necessaryAdmins = admins.slice((page - 1) * limit, page * limit);
-
         const filteredAdmins = necessaryAdmins.map(({ password, ...admin }) => admin)
 
         return {
@@ -116,17 +109,13 @@ export class AdminService {
     }
 
     async getSpecificAdmin(user: AdminDto, id: number) {
-        const foundAdmin = await this.prisma.admins.findUnique({
-            where: {
-                id: id
-            }
+        const admin = await this.prisma.admins.findUnique({
+            where: { id: id }
         })
-
-        delete foundAdmin.password;
-
+        delete admin.password;
         return {
             message: "Information of the admin",
-            admin: foundAdmin
+            admin: admin
         }
     }
 
@@ -135,16 +124,13 @@ export class AdminService {
         try {
             const result = await this.prisma.$transaction(async (tx) => {
                 const updatedAdmin = await tx.admins.update({
-                    where: {
-                        id: id
-                    },
+                    where: { id: id },
                     data: {
                         firstName: dto.firstName,
                         lastName: dto.lastName,
                         email: dto.email
                     }
                 })
-        
                 const updatedAdminPermissions = await tx.permissions.update({
                     where: {
                         id: updatedAdmin.id,
@@ -183,9 +169,7 @@ export class AdminService {
                         delete: dto.clientPermissions.delete
                     }
                 })
-        
                 delete updatedAdmin.password;
-        
                 return {
                     message: "Admin has been updated successfully",
                     admin: updatedAdmin,
@@ -194,26 +178,17 @@ export class AdminService {
                     updatedClientPermissions: updatedClientPermissions
                 }
             })
-
             return result;
         } catch (error) {
-            if(error instanceof HttpException) {
-                throw error;
-            }
-            throw new InternalServerErrorException("An error occured while updating the admin")
+            throw error instanceof HttpException ? error : new InternalServerErrorException("An error occured while updating the admin")
         }
         
     }
 
     async deleteSpecificAdmin(user: AdminDto, id: number) {
         await this.prisma.admins.delete({
-            where: {
-                id: id
-            }
+            where: { id: id }
         })
-
-        return {
-            message: "Admin has been deleted successfully"
-        }
+        return { message: "Admin has been deleted successfully" }
     }
 }

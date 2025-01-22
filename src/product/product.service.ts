@@ -8,7 +8,7 @@ export class ProductService {
 
     constructor(private prisma: PrismaService) { }
 
-    checkProvidedValuesForNullOptions(dto: ProductDto) {
+    checkProvidedVarientValuesForNullOptions(dto: ProductDto) {
         for (let i = 0; i < dto.varients.length; i++) {
             if (!dto.options[0]) {
                 dto.varients[i].option1 = null;
@@ -34,7 +34,6 @@ export class ProductService {
     }
 
     async createProduct(dto: ProductDto, images: Express.Multer.File[]) {
-
         try {
             const result = await this.prisma.$transaction(async (tx) => {
                 var newProduct = await tx.products.create({
@@ -53,7 +52,7 @@ export class ProductService {
                     if (dto.varients) {
 
                         // Ignoring the option values from the varients where options are not given and checking whether values are given in the varients for provided options
-                        this.checkProvidedValuesForNullOptions(dto);
+                        this.checkProvidedVarientValuesForNullOptions(dto);
 
                         // Collecting unique present elements for all the options
                         const uniqueOption1 = new Set<string>();
@@ -200,38 +199,23 @@ export class ProductService {
 
                 // Increasing the count of total products
                 await tx.productCounts.update({
-                    where: {
-                        id: 1
-                    },
-                    data: {
-                        count: {
-                            increment: 1
-                        }
-                    }
+                    where: { id: 1 },
+                    data: { count: { increment: 1 } }
                 })
 
                 // Fetching the newly created product
                 const newlyCreatedProduct = await tx.products.findUnique({
-                    where: {
-                        id: newProduct.id
-                    },
+                    where: { id: newProduct.id },
                     include: {
                         options: true,
                         varients: true
                     }
                 })
-
                 return newlyCreatedProduct;
             })
-
             return result;
         } catch (error) {
-
-            if (error instanceof HttpException) {
-                throw error;
-            }
-
-            throw new InternalServerErrorException("An error occured while creating the product")
+            throw error instanceof HttpException ? error : new InternalServerErrorException("An error occured while creating the product")
         }
     }
 
@@ -242,24 +226,19 @@ export class ProductService {
                 varients: true
             }
         })
-
         return allProducts;
     }
 
     async getTotalProductsCount() {
         const productCounts = await this.prisma.productCounts.findUnique({
-            where: {
-                id: 1
-            }
+            where: { id: 1 }
         })
         return productCounts.count;
     }
 
     async getSpecificProduct(id: number) {
         const product = await this.prisma.products.findUnique({
-            where: {
-                id: id
-            },
+            where: { id: id },
             include: {
                 options: true,
                 varients: true
@@ -269,13 +248,10 @@ export class ProductService {
     }
 
     async updateSpecificProduct(id: number, dto: UpdateProductDto, images: Express.Multer.File[]) {
-
         try {
             const result = this.prisma.$transaction(async (tx) => {
                 const currentProduct = await tx.products.update({
-                    where: {
-                        id: id
-                    },
+                    where: { id: id },
                     include: {
                         options: true,
                         varients: true
@@ -295,7 +271,7 @@ export class ProductService {
                     if (dto.varients) {
 
                         // Ignoring the option values from the varients where options are not given and checking whether values are given in the varients for provided options
-                        this.checkProvidedValuesForNullOptions(dto);
+                        this.checkProvidedVarientValuesForNullOptions(dto);
 
                         // Collecting unique present elements for all the options
                         const uniqueOption1 = new Set<string>();
@@ -361,16 +337,12 @@ export class ProductService {
 
                         // Deleting the previous options
                         await tx.options.deleteMany({
-                            where: {
-                                productId: currentProduct.id
-                            }
+                            where: { productId: currentProduct.id }
                         })
 
                         // Deleting the previous varients
                         await tx.varients.deleteMany({
-                            where: {
-                                productId: currentProduct.id
-                            }
+                            where: { productId: currentProduct.id }
                         })
 
                         // Creating the options with the unique value passed to the varient's options
@@ -431,49 +403,29 @@ export class ProductService {
 
                 // Fetching the updated product from the database
                 const updatedProduct = await tx.products.findUnique({
-                    where: {
-                        id: id
-                    },
+                    where: { id: id },
                     include: {
                         options: true,
                         varients: true
                     }
                 })
-
                 return updatedProduct;
             })
-
             return result;
-
         } catch (error) {
-
-            if (error instanceof HttpException) {
-                throw error;
-            }
-
-            throw new InternalServerErrorException("An error occured while updating the product");
+            throw error instanceof HttpException ? error : new InternalServerErrorException("An error occured while updating the product");
         }
-
     }
 
     async deleteSpecificProduct(id: number) {
-
         try {
             await this.prisma.$transaction(async (tx) => {
                 await this.prisma.products.delete({
-                    where: {
-                        id: id
-                    }
+                    where: { id: id }
                 })
                 await this.prisma.productCounts.update({
-                    where: {
-                        id: 1
-                    },
-                    data: {
-                        count: {
-                            decrement: 1
-                        }
-                    }
+                    where: { id: 1 },
+                    data: { count: { decrement: 1 } }
                 })
             })
             return "Product removed successfully";

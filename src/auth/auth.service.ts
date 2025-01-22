@@ -19,16 +19,19 @@ export class AuthService {
 
     async adminSignup(dto: AdminSignupDto) {
 
+        // Checking whether there exist any previous admin or not
+        const adminCount = await this.prisma.admins.count();
+
+        if (adminCount) {
+            throw new ForbiddenException("You can't signup as a new admin")
+        }
+
+        // Hashing the password using argon
+        const hashedPassword = await argon.hash(dto.password);
+
+        // Saving the super admin in the database with all the required permissions
         try {
             const result = await this.prisma.$transaction(async (tx) => {
-                const adminCount = await tx.admins.count();
-
-                if (adminCount) {
-                    throw new ForbiddenException("You can't signup as a new admin")
-                }
-
-                const hashedPassword = await argon.hash(dto.password);
-
                 const superAdmin = await tx.admins.create({
                     data: {
                         firstName: dto.firstName,
@@ -37,7 +40,6 @@ export class AuthService {
                         password: hashedPassword
                     }
                 })
-
                 const adminPermissions = await tx.permissions.create({
                     data: {
                         adminId: superAdmin.id,
@@ -48,7 +50,6 @@ export class AuthService {
                         delete: true
                     }
                 })
-
                 const productPermissions = await tx.permissions.create({
                     data: {
                         adminId: superAdmin.id,
@@ -59,7 +60,6 @@ export class AuthService {
                         delete: true
                     }
                 })
-
                 const clientPermissions = await tx.permissions.create({
                     data: {
                         adminId: superAdmin.id,
@@ -70,9 +70,7 @@ export class AuthService {
                         delete: true
                     }
                 })
-
                 delete superAdmin.password
-
                 return {
                     message: "You have signed up as the super admin. Congratulations!",
                     admin: superAdmin,
@@ -81,35 +79,29 @@ export class AuthService {
                     clientPermissions: clientPermissions
                 }
             })
-
             return result;
         } catch (error) {
-            if (error instanceof HttpException) {
-                throw error;
-            }
-            throw new InternalServerErrorException("An error occured while signing up as admin");
+            throw error instanceof HttpException ? error : new InternalServerErrorException("An error occured while signing up as admin");
         }
 
     }
 
     async adminSignin(dto: AdminSigninDto) {
+        // Checking whether there exist any admin in the database with this email
         const admin = await this.prisma.admins.findUnique({
-            where: {
-                email: dto.email
-            }
+            where: { email: dto.email }
         })
 
         if (!admin) {
             throw new ForbiddenException("There is no admin with this email")
         }
 
+        // Matching password
         if (!await argon.verify(admin.password, dto.password)) {
             throw new ForbiddenException("Password is incorrect")
         }
 
-        return {
-            access_token: await this.signAdminToken(admin, "admin")
-        }
+        return { access_token: await this.signAdminToken(admin, "admin") }
     }
 
     async signAdminToken(admin: Admins, role: string) {
@@ -130,61 +122,60 @@ export class AuthService {
         return token;
     }
 
-    async clientSignup (dto : ClientSignupDto) {
+    async clientSignup(dto: ClientSignupDto) {
+        // Checking there already exist any client with this email
+        const client = await this.prisma.clients.findUnique({
+            where: { email: dto.email }
+        })
+        if (client) {
+            throw new ConflictException("Customer already exist with this email")
+        }
+
+        // Hashing the password using argon
+        const hashedPassword = await argon.hash(dto.password)
+        
+        // Saving new client information in the database with address
         try {
-            const result = await this.prisma.$transaction(async (tx) => {
-                const client = await tx.clients.findUnique({
-                    where : {
-                        email : dto.email
-                    }
-                })
-                if(client){
-                    throw new ConflictException("Customer already exist with this email")
-                }
-                const hashedPassword = await argon.hash(dto.password)
+            const result = await this.prisma.$transaction(async (tx) => {        
                 const newClient = await tx.clients.create({
-                    data : {
-                        firstName : dto.firstName,
-                        lastName : dto.lastName,
-                        email : dto.email,
-                        password : hashedPassword,
-                        status : CustomerStatus.active
+                    data: {
+                        firstName: dto.firstName,
+                        lastName: dto.lastName,
+                        email: dto.email,
+                        password: hashedPassword,
+                        status: CustomerStatus.active
                     }
                 })
                 delete newClient.password;
                 const clientAddress = await tx.clientAddress.create({
-                    data : {
-                        clientId : newClient.id,
-                        address : dto.address.address,
-                        city : dto.address.city,
-                        country : dto.address.country,
-                        zipCode : dto.address.zipCode,
-                        contactNo : dto.address.contactNo
+                    data: {
+                        clientId: newClient.id,
+                        address: dto.address.address,
+                        city: dto.address.city,
+                        country: dto.address.country,
+                        zipCode: dto.address.zipCode,
+                        contactNo: dto.address.contactNo
                     }
                 })
                 return { newClient, clientAddress };
             })
             return result;
         } catch (error) {
-            if (error instanceof HttpException) {
-                throw error;
-            }
-            throw new InternalServerErrorException("An error occured while signing up as customer");
+            throw error instanceof HttpException ? error : new InternalServerErrorException("An error occured while signing up as customer");
         }
     }
 
     async clientSignin(dto: ClientSigninDto) {
+        // Verifying whether there exist any client with this email
         const client = await this.prisma.clients.findUnique({
-            where: {
-                email: dto.email
-            }
+            where: { email: dto.email }
         })
 
         if (!client) {
             throw new ForbiddenException("There is no customer with this email")
         }
 
-        if(client.status === ClientStatus.inactive) {
+        if (client.status === ClientStatus.inactive) {
             throw new UnprocessableEntityException("You need to activate your account");
         }
 
@@ -192,9 +183,7 @@ export class AuthService {
             throw new ForbiddenException("Password is incorrect")
         }
 
-        return {
-            access_token: await this.signClientToken(client, "client")
-        }
+        return { access_token: await this.signClientToken(client, "client") }
     }
 
     async signClientToken(client: Clients, role: string) {
@@ -215,39 +204,46 @@ export class AuthService {
         return token;
     }
 
-    async clientActivate(dto : ClientActivateDto) {
+    async clientActivate(dto: ClientActivateDto) {
+        // Check whether the client is already active or not
+        const client = await this.prisma.clients.findUnique({
+            where : { email : dto.email }
+        })
+        if(client.status === CustomerStatus.active){
+            throw new ConflictException("Customer already has an active account")
+        }
+        
+        // Hashing the password using argon
+        const hashedPassword = await argon.hash(dto.password)
+        
         try {
             const result = await this.prisma.$transaction(async (tx) => {
-                const hashedPassword = await argon.hash(dto.password)
                 const updatedClient = await this.prisma.clients.update({
-                    where : { email : dto.email },
-                    data : {
-                        firstName : dto.firstName,
-                        lastName : dto.lastName,
-                        email : dto.email,
-                        password : hashedPassword,
-                        status : CustomerStatus.active
+                    where: { email: dto.email },
+                    data: {
+                        firstName: dto.firstName,
+                        lastName: dto.lastName,
+                        email: dto.email,
+                        password: hashedPassword,
+                        status: CustomerStatus.active
                     }
                 })
                 delete updatedClient.password;
                 const clientAddress = await tx.clientAddress.create({
-                    data : {
-                        clientId : updatedClient.id,
-                        address : dto.address.address,
-                        city : dto.address.city,
-                        country : dto.address.country,
-                        zipCode : dto.address.zipCode,
-                        contactNo : dto.address.contactNo
+                    data: {
+                        clientId: updatedClient.id,
+                        address: dto.address.address,
+                        city: dto.address.city,
+                        country: dto.address.country,
+                        zipCode: dto.address.zipCode,
+                        contactNo: dto.address.contactNo
                     }
                 })
                 return { updatedClient, clientAddress };
             })
             return result;
         } catch (error) {
-            if(error instanceof HttpException){
-                throw error;
-            }
-            throw new InternalServerErrorException("An error occured while activating the account");
+            throw error instanceof HttpException ? error : new InternalServerErrorException("An error occured while activating the account");
         }
     }
 }

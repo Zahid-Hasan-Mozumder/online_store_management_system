@@ -8,34 +8,21 @@ export class TagService {
     constructor(private prisma: PrismaService) { }
 
     async createTag(dto: TagDto) {
-
         try {
             const result = await this.prisma.$transaction(async (tx) => {
-                const newTag = await this.prisma.tags.create({
-                    data: {
-                        name: dto.name
-                    }
+                const newTag = await tx.tags.create({
+                    data: { name: dto.name }
                 })
-
-                await this.prisma.tagCounts.update({
-                    where: {
-                        id: 1
-                    },
-                    data: {
-                        count: {
-                            increment: 1
-                        }
-                    }
+                await tx.tagCounts.update({
+                    where: { id: 1 },
+                    data: { count: { increment: 1 } }
                 })
-
                 return newTag;
             })
-
             return result;
         } catch (error) {
             throw new InternalServerErrorException("An error occured while creating the tag");
         }
-
     }
 
     async addProductToTag(id: number, dto: AddProductInTagDto) {
@@ -55,58 +42,38 @@ export class TagService {
 
     async getTotalTagsCount() {
         const totalTags = await this.prisma.tagCounts.findUnique({
-            where: {
-                id: 1
-            }
+            where: { id: 1 }
         })
         return totalTags.count;
     }
 
     async getSpecificTag(id: number) {
         const Tag = await this.prisma.tags.findUnique({
-            where: {
-                id: id
-            }
+            where: { id: id }
         })
-
         if (!Tag) {
             throw new NotFoundException("Tag not found");
         }
-
         return Tag;
     }
 
     async updateSpecificTag(id: number, dto: UpdateTagDto) {
         const updatedTag = await this.prisma.tags.update({
-            where: {
-                id: id
-            },
-            data: {
-                name: dto.name
-            }
+            where: { id: id },
+            data: { name: dto.name }
         })
         return updatedTag;
     }
 
     async deleteSpecificTag(id: number) {
-
         try {
             await this.prisma.$transaction(async (tx) => {
-                await this.prisma.tags.delete({
-                    where: {
-                        id: id
-                    }
+                await tx.tags.delete({
+                    where: { id: id }
                 })
-
                 await this.prisma.tagCounts.update({
-                    where: {
-                        id: 1
-                    },
-                    data: {
-                        count: {
-                            decrement: 1
-                        }
-                    }
+                    where: { id: 1 },
+                    data: { count: { decrement: 1 } }
                 })
             })
             return "Tag deleted successfully";

@@ -8,39 +8,36 @@ export class VarientService {
     constructor(private prisma: PrismaService) { }
 
     async createVarient(productId: number, dto: VarientsDto) {
+        // Fetching the product from the database
+        const product = await this.prisma.products.findUnique({
+            where: { id: productId },
+            include: {
+                options: true,
+                varients: true
+            }
+        })
+        if (!product) {
+            throw new NotFoundException("Product not found");
+        }
+
+        // Check whether none of the option value is provided
+        if (!dto.option1 && !dto.option2 && !dto.option3) {
+            throw new UnprocessableEntityException("Varient can't be created with blank option values");
+        }
+
+        // Checking whether values are provided for undeclared options
+        if (dto.option1 && (product.options.length < 1)) {
+            throw new UnprocessableEntityException("Varient can't have values for blank options");
+        }
+        if (dto.option2 && (product.options.length < 2)) {
+            throw new UnprocessableEntityException("Varient can't have values for blank options");
+        }
+        if (dto.option3 && (product.options.length < 3)) {
+            throw new UnprocessableEntityException("Varient can't have values for blank options");
+        }
 
         try {
             const result = await this.prisma.$transaction(async (tx) => {
-                // Check whether none of the option value is provided
-                if (!dto.option1 && !dto.option2 && !dto.option3) {
-                    throw new UnprocessableEntityException("Varient can't be created with blank option values");
-                }
-
-                // Fetching the product from the database
-                const product = await tx.products.findUnique({
-                    where: {
-                        id: productId
-                    },
-                    include: {
-                        options: true,
-                        varients: true
-                    }
-                })
-
-                if (!product) {
-                    throw new NotFoundException("Product not found");
-                }
-
-                // Checking whether values are provided for undeclared options
-                if (dto.option1 && (product.options.length < 1)) {
-                    throw new UnprocessableEntityException("Varient can't have values for blank options");
-                }
-                if (dto.option2 && (product.options.length < 2)) {
-                    throw new UnprocessableEntityException("Varient can't have values for blank options");
-                }
-                if (dto.option3 && (product.options.length < 3)) {
-                    throw new UnprocessableEntityException("Varient can't have values for blank options");
-                }
 
                 const uniqueCombination = new Set<string>();
                 for (let i = 0; i < product.varients.length; i++) {
@@ -72,32 +69,20 @@ export class VarientService {
 
                 if (product.options.length >= 1) {
                     await tx.options.update({
-                        where: {
-                            id: product.options[0].id
-                        },
-                        data: {
-                            values: uniqueArray1
-                        }
+                        where: { id: product.options[0].id },
+                        data: { values: uniqueArray1 }
                     })
                 }
                 if (product.options.length >= 2) {
                     await tx.options.update({
-                        where: {
-                            id: product.options[1].id
-                        },
-                        data: {
-                            values: uniqueArray2
-                        }
+                        where: { id: product.options[1].id },
+                        data: { values: uniqueArray2 }
                     })
                 }
                 if (product.options.length >= 3) {
                     await tx.options.update({
-                        where: {
-                            id: product.options[2].id
-                        },
-                        data: {
-                            values: uniqueArray3
-                        }
+                        where: { id: product.options[2].id },
+                        data: { values: uniqueArray3 }
                     })
                 }
 
@@ -113,38 +98,25 @@ export class VarientService {
                         productId: product.id
                     }
                 })
-
                 return varient;
             })
-
             return result;
         } catch (error) {
-
-            if (error instanceof HttpException) {
-                throw error
-            }
-
-            throw new InternalServerErrorException("An error occured while creating a varient");
+            throw error instanceof HttpException ? error : new InternalServerErrorException("An error occured while creating a varient");
         }
     }
 
     async getAllVarients(productId: number) {
         const product = await this.prisma.products.findUnique({
-            where: {
-                id: productId
-            },
-            include: {
-                varients: true
-            }
+            where: { id: productId },
+            include: { varients: true }
         })
         return product.varients;
     }
 
     async getSpecificVarient(id: number) {
         const varient = await this.prisma.varients.findUnique({
-            where: {
-                id: id
-            }
+            where: { id: id }
         })
         if (!varient) {
             throw new NotFoundException("Varient not found")
@@ -153,39 +125,36 @@ export class VarientService {
     }
 
     async updateSpecificVarient(productId: number, id: number, dto: VarientsDto) {
+        // Fetching the product from the database
+        const product = await this.prisma.products.findUnique({
+            where: { id: productId },
+            include: {
+                options: true,
+                varients: true
+            }
+        })
+
+        if (!product) {
+            throw new NotFoundException("Product not found");
+        }
+
+        if (!product.varients.some(item => item.id === id)) {
+            throw new NotFoundException("Varient not found");
+        }
+
+        // Checking whether values are provided for undeclared options
+        if (dto.option1 && (product.options.length < 1)) {
+            throw new UnprocessableEntityException("Varient can't have values for blank options");
+        }
+        if (dto.option2 && (product.options.length < 2)) {
+            throw new UnprocessableEntityException("Varient can't have values for blank options");
+        }
+        if (dto.option3 && (product.options.length < 3)) {
+            throw new UnprocessableEntityException("Varient can't have values for blank options");
+        }
 
         try {
             const result = await this.prisma.$transaction(async (tx) => {
-                // Fetching the product from the database
-                const product = await tx.products.findUnique({
-                    where: {
-                        id: productId
-                    },
-                    include: {
-                        options: true,
-                        varients: true
-                    }
-                })
-
-                if (!product) {
-                    throw new NotFoundException("Product not found");
-                }
-
-                if (!product.varients.some(item => item.id === id)) {
-                    throw new NotFoundException("Varient not found");
-                }
-
-                // Checking whether values are provided for undeclared options
-                if (dto.option1 && (product.options.length < 1)) {
-                    throw new UnprocessableEntityException("Varient can't have values for blank options");
-                }
-                if (dto.option2 && (product.options.length < 2)) {
-                    throw new UnprocessableEntityException("Varient can't have values for blank options");
-                }
-                if (dto.option3 && (product.options.length < 3)) {
-                    throw new UnprocessableEntityException("Varient can't have values for blank options");
-                }
-
                 const uniqueCombination = new Set<string>();
                 for (let i = 0; i < product.varients.length; i++) {
                     if (product.varients[i].id === id) continue;
@@ -218,40 +187,26 @@ export class VarientService {
 
                 if (product.options.length >= 1) {
                     await tx.options.update({
-                        where: {
-                            id: product.options[0].id
-                        },
-                        data: {
-                            values: uniqueArray1
-                        }
+                        where: { id: product.options[0].id },
+                        data: { values: uniqueArray1 }
                     })
                 }
                 if (product.options.length >= 2) {
                     await tx.options.update({
-                        where: {
-                            id: product.options[1].id
-                        },
-                        data: {
-                            values: uniqueArray2
-                        }
+                        where: { id: product.options[1].id },
+                        data: { values: uniqueArray2 }
                     })
                 }
                 if (product.options.length >= 3) {
                     await tx.options.update({
-                        where: {
-                            id: product.options[2].id
-                        },
-                        data: {
-                            values: uniqueArray3
-                        }
+                        where: { id: product.options[2].id },
+                        data: { values: uniqueArray3 }
                     })
                 }
 
                 // Updating the varient
                 const updatedVarient = await tx.varients.update({
-                    where: {
-                        id: id
-                    },
+                    where: { id: id },
                     data: {
                         title: dto.title,
                         option1: dto.option1,
@@ -261,25 +216,18 @@ export class VarientService {
                         comparePrice: dto.comparePrice
                     }
                 })
-
                 return updatedVarient;
             })
-
             return result;
         } catch (error) {
-            if (error instanceof HttpException) {
-                throw error;
-            }
-            throw new InternalServerErrorException("An error occured while updating the varient");
+            throw error instanceof HttpException ? error : new InternalServerErrorException("An error occured while updating the varient");
         }
 
     }
 
     async deleteSpecificVarient(productId: number, id: number) {
         await this.prisma.varients.delete({
-            where: {
-                id: id
-            }
+            where: { id: id }
         })
         return "Varient removed successfully";
     }

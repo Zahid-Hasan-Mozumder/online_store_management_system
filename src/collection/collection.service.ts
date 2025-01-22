@@ -8,33 +8,21 @@ export class CollectionService {
     constructor(private prisma: PrismaService) { }
 
     async createCollection(dto: CollectionDto) {
-
         try {
-
             const result = await this.prisma.$transaction(async (tx) => {
-
+                // Saving new collection in the database
                 const newCollection = await tx.collections.create({
-                    data: {
-                        name: dto.name
-                    }
+                    data: { name: dto.name }
                 })
 
+                // Increasing the count value for collection in database
                 await tx.collectionCounts.update({
-                    where: {
-                        id: 1
-                    },
-                    data: {
-                        count: {
-                            increment: 1
-                        }
-                    }
+                    where: { id: 1 },
+                    data: { count: { increment: 1 } }
                 })
-
                 return newCollection;
             })
-
             return result;
-
         } catch (error) {
             throw new InternalServerErrorException("An error occured while creating a collection");
         }
@@ -57,66 +45,45 @@ export class CollectionService {
 
     async getTotalCollectionsCount() {
         const totalCollections = await this.prisma.collectionCounts.findUnique({
-            where: {
-                id: 1
-            }
+            where: { id: 1 }
         })
         return totalCollections.count;
     }
 
     async getSpecificCollection(id: number) {
         const collection = await this.prisma.collections.findUnique({
-            where: {
-                id: id
-            }
+            where: { id: id }
         })
-
         if (!collection) {
             throw new NotFoundException("Collection not found");
         }
-
         return collection;
     }
 
     async updateSpecificCollection(id: number, dto: UpdateCollectionDto) {
         const updatedCollection = await this.prisma.collections.update({
-            where: {
-                id: id
-            },
-            data: {
-                name: dto.name
-            }
+            where: { id: id },
+            data: { name: dto.name }
         })
         return updatedCollection;
     }
 
     async deleteSpecificCollection(id: number) {
-
         try {
             await this.prisma.$transaction(async (tx) => {
+                // Deleting collection information from database
                 await tx.collections.delete({
-                    where: {
-                        id: id
-                    }
+                    where: { id: id }
                 })
-
+                // Decrementing the collection counts from database
                 await tx.collectionCounts.update({
-                    where: {
-                        id: 1
-                    },
-                    data: {
-                        count: {
-                            decrement: 1
-                        }
-                    }
+                    where: { id: 1 },
+                    data: { count: { decrement: 1 } }
                 })
             })
-
             return "Collection deleted successfully";
         } catch (error) {
             throw new InternalServerErrorException("An error occured while deleting the collection" + error.message);
         }
-
-
     }
 }
